@@ -1,30 +1,5 @@
 ---
-// Handle the POST request for login
-let error = "";
-if (Astro.request.method === 'POST') {
-  const data = await Astro.request.formData();
-  const email = data.get('email')?.toString();
-  const password = data.get('password')?.toString();
-  
-  if (email && password) {
-    // Check if the email exists in our D1 database and is an admin
-    const db = Astro.locals.runtime.env.DB;
-    const { results } = await db.prepare('SELECT * FROM users WHERE email = ? AND password = ? AND role = ?').bind(email, password, 'admin').all();
-    
-    if (results && results.length > 0) {
-      // Set a secure cookie that the middleware will read
-      Astro.cookies.set('admin_fallback_email', email.toString(), { 
-        path: '/', 
-        httpOnly: true, 
-        secure: true, 
-        maxAge: 60 * 60 * 24 * 7 // 1 week
-      });
-      return Astro.redirect('/admin');
-    } else {
-       error = "Access Denied: Invalid email or password.";
-    }
-  }
-}
+const error = Astro.url.searchParams.get('error');
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -84,7 +59,7 @@ if (Astro.request.method === 'POST') {
         
         {error && <div class="error">{error}</div>}
 
-        <form method="POST">
+        <form method="POST" action="/api/admin/login">
             <div class="form-group">
                 <label for="email">Admin Email Address</label>
                 <input type="email" id="email" name="email" required placeholder="gan4ev@gmail.com">
