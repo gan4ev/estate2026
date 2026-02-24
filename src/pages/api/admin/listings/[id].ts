@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { slugify } from '../../../../lib/slugs.js';
 
 export const GET: APIRoute = async ({ params, locals }) => {
     try {
@@ -8,7 +9,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
         if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), { status: 400 });
 
         const { results } = await db.prepare(`
-            SELECT l.*, i.title, i.description,
+            SELECT l.*, i.title, i.description, i.slug, i.meta_title, i.meta_description,
             (SELECT json_group_array(extra_key) FROM listing_extras WHERE listing_id = l.id) AS extras,
             (SELECT json_group_array(json_object('id', id, 'r2_key', r2_key, 'is_primary', is_primary, 'sort_order', sort_order)) 
              FROM (SELECT * FROM media WHERE listing_id = l.id ORDER BY sort_order ASC)) AS media
@@ -54,8 +55,11 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
         if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), { status: 400 });
 
-        const title = formData.get('title')?.toString();
-        const description = formData.get('description')?.toString();
+        const title = formData.get('title')?.toString() || '';
+        const slug = formData.get('slug')?.toString() || slugify(title);
+        const description = formData.get('description')?.toString() || '';
+        const meta_title = formData.get('meta_title')?.toString() || title;
+        const meta_description = formData.get('meta_description')?.toString() || description?.substring(0, 160);
         const main_category = formData.get('main_category')?.toString() || 'for_sale';
         const property_type = formData.get('property_type')?.toString();
         const stage = formData.get('stage')?.toString() || null;
@@ -83,9 +87,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
             // Update English translation
             db.prepare(`
                 UPDATE listing_i18n 
-                SET title = ?, description = ?
+                SET title = ?, description = ?, slug = ?, meta_title = ?, meta_description = ?
                 WHERE listing_id = ? AND lang = 'en'
-            `).bind(title, description, id),
+            `).bind(title, description, slug, meta_title, meta_description, id),
 
             // Clear and rebuild extras to simplify the logic
             db.prepare(`DELETE FROM listing_extras WHERE listing_id = ?`).bind(id)

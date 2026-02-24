@@ -1,0 +1,40 @@
+---
+const { 
+  title, 
+  description, 
+  image, 
+  url, 
+  type = 'website',
+  lang = 'en'
+} = Astro.props;
+
+const siteName = "Estate 2026";
+const fullTitle = title ? `${title} | ${siteName}` : siteName;
+const twitterHandle = "@estate2026";
+---
+
+<!-- Primary Meta Tags -->
+<title>{fullTitle}</title>
+<meta name="title" content={fullTitle} />
+<meta name="description" content={description} />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content={type} />
+<meta property="og:url" content={url} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+{image && <meta property="og:image" content={image} />}
+<meta property="og:site_name" content={siteName} />
+<meta property="og:locale" content={lang === 'bg' ? 'bg_BG' : 'en_US'} />
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content={url} />
+<meta property="twitter:title" content={fullTitle} />
+<meta property="twitter:description" content={description} />
+{image && <meta property="twitter:image" content={image} />}
+<meta property="twitter:site" content={twitterHandle} />
+
+<!-- Canonical -->
+<link rel="canonical" href={url} />
+<meta name="robots" content="index, follow" />

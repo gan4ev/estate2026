@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { slugify } from '../../../../lib/slugs.js';
 
 export const GET: APIRoute = async ({ locals }) => {
     try {
@@ -6,7 +7,9 @@ export const GET: APIRoute = async ({ locals }) => {
         const { results } = await db.prepare(`
             SELECT a.*, ci.id as city_id,
             (SELECT name FROM location_i18n WHERE entity_id = a.id AND lang = 'en' AND entity_type = 'area') as name_en,
-            (SELECT name FROM location_i18n WHERE entity_id = a.id AND lang = 'bg' AND entity_type = 'area') as name_bg
+            (SELECT name FROM location_i18n WHERE entity_id = a.id AND lang = 'bg' AND entity_type = 'area') as name_bg,
+            (SELECT slug FROM location_i18n WHERE entity_id = a.id AND lang = 'en' AND entity_type = 'area') as slug_en,
+            (SELECT slug FROM location_i18n WHERE entity_id = a.id AND lang = 'bg' AND entity_type = 'area') as slug_bg
             FROM areas a
             JOIN cities ci ON a.city_id = ci.id
             ORDER BY a.created_at DESC
@@ -34,12 +37,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const statements = [
             db.prepare(`INSERT INTO areas (id, city_id) VALUES (?, ?)`).bind(areaId, cityId),
-            db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name) VALUES (?, ?, 'area', 'en', ?)`).bind(crypto.randomUUID(), areaId, nameEn),
+            db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name, slug) VALUES (?, ?, 'area', 'en', ?, ?)`).bind(crypto.randomUUID(), areaId, nameEn, slugify(nameEn)),
         ];
 
         if (nameBg) {
             statements.push(
-                db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name) VALUES (?, ?, 'area', 'bg', ?)`).bind(crypto.randomUUID(), areaId, nameBg)
+                db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name, slug) VALUES (?, ?, 'area', 'bg', ?, ?)`).bind(crypto.randomUUID(), areaId, nameBg, slugify(nameBg))
             );
         }
 

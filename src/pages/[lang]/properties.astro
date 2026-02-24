@@ -21,14 +21,18 @@ let query = `
         l.bedrooms, 
         l.area_sqm,
         i.title, 
+        i.slug as property_slug,
         (SELECT r2_key FROM media WHERE listing_id = l.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as main_image,
-        (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name
+        (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name,
+        (SELECT slug FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_slug,
+        (SELECT slug FROM location_i18n WHERE entity_id = (SELECT city_id FROM areas WHERE id = l.area_id) AND lang = ? AND entity_type = 'city') as city_slug,
+        (SELECT slug FROM location_i18n WHERE entity_id = (SELECT country_id FROM cities WHERE id = (SELECT city_id FROM areas WHERE id = l.area_id)) AND lang = ? AND entity_type = 'country') as country_slug
     FROM listings l
     LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
     WHERE l.status = 'published'
 `;
 
-const params = [lang, lang];
+const params = [lang, lang, lang, lang, lang];
 
 if (searchQuery) {
     query += ` AND (i.title LIKE ? OR i.description LIKE ?)`;
@@ -302,37 +306,45 @@ const { results: properties } = await db.prepare(query).bind(...params).all();
     <main class="results-section container">
         {properties?.length > 0 ? (
             <div class="property-grid">
-                {properties.map(p => (
-                    <a href={`/${lang}/properties/${p.id}`} class="property-card">
-                        <div class="property-image">
-                            {p.main_image ? (
-                                <img src={`/api/media/${p.main_image}`} alt={p.title} />
-                            ) : (
-                                <div style="width: 100%; height: 100%; background: #f4f4f5; display: flex; align-items: center; justify-content: center; color: #a1a1aa;">No image</div>
-                            )}
-                            <div class="property-price">
-                                {new Intl.NumberFormat(lang === 'bg' ? 'bg-BG' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(p.price)}
-                            </div>
-                        </div>
-                        <div class="property-content">
-                            <h3 class="property-title">{p.title || 'Property Listing'}</h3>
-                            <div class="property-area">
-                                📍 {p.area_name || 'Premium Location'}
-                            </div>
-                            
-                            <div class="property-info">
-                                <div class="info-item">
-                                    <span class="icon">🛏️</span>
-                                    <span>{p.bedrooms || 0} {t('listing.bedrooms')}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="icon">📐</span>
-                                    <span>{p.area_sqm || 0} m²</span>
+                {properties.map(p => {
+                    const countrySlug = p.country_slug || 'all';
+                    const citySlug = p.city_slug || 'all';
+                    const areaSlug = p.area_slug || 'all';
+                    const propertySlug = p.property_slug || p.id;
+                    const propertyUrl = `/${lang}/properties/${countrySlug}/${citySlug}/${areaSlug}/${propertySlug}`;
+                    
+                    return (
+                        <a href={propertyUrl} class="property-card">
+                            <div class="property-image">
+                                {p.main_image ? (
+                                    <img src={`/api/media/${p.main_image}`} alt={p.title} />
+                                ) : (
+                                    <div style="width: 100%; height: 100%; background: #f4f4f5; display: flex; align-items: center; justify-content: center; color: #a1a1aa;">No image</div>
+                                )}
+                                <div class="property-price">
+                                    {new Intl.NumberFormat(lang === 'bg' ? 'bg-BG' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(p.price)}
                                 </div>
                             </div>
-                        </div>
-                    </a>
-                ))}
+                            <div class="property-content">
+                                <h3 class="property-title">{p.title || 'Property Listing'}</h3>
+                                <div class="property-area">
+                                    📍 {p.area_name || 'Premium Location'}
+                                </div>
+                                
+                                <div class="property-info">
+                                    <div class="info-item">
+                                        <span class="icon">🛏️</span>
+                                        <span>{p.bedrooms || 0} {t('listing.bedrooms')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="icon">📐</span>
+                                        <span>{p.area_sqm || 0} m²</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    );
+                })}
             </div>
         ) : (
             <div class="empty-state">

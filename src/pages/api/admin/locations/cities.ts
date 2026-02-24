@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { slugify } from '../../../../lib/slugs.js';
 
 export const GET: APIRoute = async ({ locals }) => {
     try {
@@ -6,7 +7,9 @@ export const GET: APIRoute = async ({ locals }) => {
         const { results } = await db.prepare(`
             SELECT c.*, co.code as country_code,
             (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'en' AND entity_type = 'city') as name_en,
-            (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'city') as name_bg
+            (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'city') as name_bg,
+            (SELECT slug FROM location_i18n WHERE entity_id = c.id AND lang = 'en' AND entity_type = 'city') as slug_en,
+            (SELECT slug FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'city') as slug_bg
             FROM cities c
             JOIN countries co ON c.country_id = co.id
             ORDER BY c.created_at DESC
@@ -34,12 +37,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const statements = [
             db.prepare(`INSERT INTO cities (id, country_id) VALUES (?, ?)`).bind(cityId, countryId),
-            db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name) VALUES (?, ?, 'city', 'en', ?)`).bind(crypto.randomUUID(), cityId, nameEn),
+            db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name, slug) VALUES (?, ?, 'city', 'en', ?, ?)`).bind(crypto.randomUUID(), cityId, nameEn, slugify(nameEn)),
         ];
 
         if (nameBg) {
             statements.push(
-                db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name) VALUES (?, ?, 'city', 'bg', ?)`).bind(crypto.randomUUID(), cityId, nameBg)
+                db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name, slug) VALUES (?, ?, 'city', 'bg', ?, ?)`).bind(crypto.randomUUID(), cityId, nameBg, slugify(nameBg))
             );
         }
 

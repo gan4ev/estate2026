@@ -1,12 +1,16 @@
 import type { APIRoute } from 'astro';
+import { slugify } from '../../../../lib/slugs.js';
 
 export const POST: APIRoute = async ({ request, locals }) => {
     try {
         const db = locals.runtime.env.DB;
         const formData = await request.formData();
 
-        const title = formData.get('title')?.toString();
-        const description = formData.get('description')?.toString();
+        const title = formData.get('title')?.toString() || '';
+        const slug = formData.get('slug')?.toString() || slugify(title);
+        const description = formData.get('description')?.toString() || '';
+        const meta_title = formData.get('meta_title')?.toString() || title;
+        const meta_description = formData.get('meta_description')?.toString() || description?.substring(0, 160);
         const main_category = formData.get('main_category')?.toString() || 'for_sale';
         const property_type = formData.get('property_type')?.toString();
         const stage = formData.get('stage')?.toString() || null;
@@ -32,9 +36,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             `).bind(listingId, price, main_category, property_type, stage, area_id, bedrooms, bathrooms, area_sqm),
 
             db.prepare(`
-                INSERT INTO listing_i18n (id, listing_id, lang, title, description)
-                VALUES (?, ?, 'en', ?, ?)
-            `).bind(i18nId, listingId, title, description)
+                INSERT INTO listing_i18n (id, listing_id, lang, title, description, slug, meta_title, meta_description)
+                VALUES (?, ?, 'en', ?, ?, ?, ?, ?)
+            `).bind(i18nId, listingId, title, description, slug, meta_title, meta_description)
         ];
 
         // 2. Append all the M2M Amenity linkages gracefully

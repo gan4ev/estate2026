@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { slugify } from '../../../../lib/slugs.js';
 
 export const GET: APIRoute = async ({ locals }) => {
     try {
@@ -7,7 +8,9 @@ export const GET: APIRoute = async ({ locals }) => {
         const { results } = await db.prepare(`
             SELECT c.*, 
             (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'en' AND entity_type = 'country') as name_en,
-            (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'country') as name_bg
+            (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'country') as name_bg,
+            (SELECT slug FROM location_i18n WHERE entity_id = c.id AND lang = 'en' AND entity_type = 'country') as slug_en,
+            (SELECT slug FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'country') as slug_bg
             FROM countries c
             ORDER BY created_at DESC
         `).all();
@@ -34,12 +37,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const statements = [
             db.prepare(`INSERT INTO countries (id, code) VALUES (?, ?)`).bind(countryId, code),
-            db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name) VALUES (?, ?, 'country', 'en', ?)`).bind(crypto.randomUUID(), countryId, nameEn),
+            db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name, slug) VALUES (?, ?, 'country', 'en', ?, ?)`).bind(crypto.randomUUID(), countryId, nameEn, slugify(nameEn)),
         ];
 
         if (nameBg) {
             statements.push(
-                db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name) VALUES (?, ?, 'country', 'bg', ?)`).bind(crypto.randomUUID(), countryId, nameBg)
+                db.prepare(`INSERT INTO location_i18n (id, entity_id, entity_type, lang, name, slug) VALUES (?, ?, 'country', 'bg', ?, ?)`).bind(crypto.randomUUID(), countryId, nameBg, slugify(nameBg))
             );
         }
 
