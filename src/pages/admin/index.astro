@@ -1,0 +1,101 @@
+---
+const user = Astro.locals.user;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard | Estate 2026</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #333;
+        background: #f4f4f5;
+        display: flex;
+        min-height: 100vh;
+      }
+      aside {
+        width: 250px;
+        background: #18181b;
+        color: #fff;
+        padding: 2rem 1rem;
+        display: flex;
+        flex-direction: column;
+      }
+      aside h2 {
+        font-size: 1.25rem;
+        margin-top: 0;
+        margin-bottom: 2rem;
+        padding-left: 1rem;
+      }
+      nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      nav a {
+        color: #a1a1aa;
+        text-decoration: none;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+      nav a:hover, nav a.active {
+        background: #27272a;
+        color: #fff;
+      }
+      main {
+        flex: 1;
+        padding: 2rem 3rem;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e4e4e7;
+      }
+      .user-badge {
+        background: #e4e4e7;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+      .card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h2>Estate 2026</h2>
+      <nav>
+        <a href="/admin" class="active">Dashboard</a>
+        <a href="/admin/listings">Properties</a>
+        <a href="/">← Back to Site</a>
+      </nav>
+    </aside>
+
+    <main>
+      <header>
+        <h1>Admin Dashboard</h1>
+        <div class="user-badge">
+          Logged in as: {user?.email} ({user?.role})
+        </div>
+      </header>
+
+      <div class="card">
+        <h3>Welcome back!</h3>
+        <p>Your Cloudflare Access authentication is active and the D1 Database is connected.</p>
+      </div>
+    </main>
+  </body>
+</html>
