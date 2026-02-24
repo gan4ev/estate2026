@@ -126,7 +126,6 @@ const { title } = Astro.props;
       <nav>
         <a href="/admin" class={pathname === '/admin' ? 'active' : ''}>{t('admin.dashboard')}</a>
         <a href="/admin/listings" class={pathname.includes('/admin/listings') ? 'active' : ''}>{t('admin.properties')}</a>
-        <a href="/admin/translations" class={pathname.includes('/admin/translations') ? 'active' : ''}>{t('admin.translations')}</a>
         <a href="/">{t('admin.back_to_site')}</a>
       </nav>
     </aside>
