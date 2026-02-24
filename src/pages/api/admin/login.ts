@@ -3,8 +3,8 @@ import type { APIRoute } from 'astro';
 export const POST: APIRoute = async ({ request, locals, cookies, redirect }) => {
     try {
         const data = await request.formData();
-        const email = data.get('email')?.toString();
-        const password = data.get('password')?.toString();
+        const email = data.get('email')?.toString().trim();
+        const password = data.get('password')?.toString().trim();
 
         if (!email || !password) {
             return redirect('/admin/login?error=Missing+credentials');
@@ -15,9 +15,12 @@ export const POST: APIRoute = async ({ request, locals, cookies, redirect }) => 
             return redirect('/admin/login?error=Database+binding+not+found');
         }
 
+        console.log(`[API Login] Attempting DB auth for: "${email}" with password: "${password}"`);
         const { results } = await db.prepare('SELECT * FROM users WHERE email = ? AND password = ? AND role = ?')
             .bind(email, password, 'admin')
             .all();
+
+        console.log(`[API Login] Auth query returned ${results?.length} records`);
 
         if (results && results.length > 0) {
             // Set a secure cookie
