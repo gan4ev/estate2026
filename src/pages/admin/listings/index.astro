@@ -1,9 +1,12 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../../lib/i18n.js';
 
 // We can fetch data directly in the Astro component using the D1 binding!
 const db = Astro.locals.runtime.env.DB;
 const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, adminLang) || {};
+const t = (key: string) => dict[key] || key;
 
 const { results: listings } = await db.prepare(`
   SELECT l.*, i.title 
@@ -13,22 +16,22 @@ const { results: listings } = await db.prepare(`
 `).bind(adminLang).all();
 ---
 
-<AdminLayout title="Manage Properties">
+<AdminLayout title={t('admin.manage_properties')}>
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <h2>All Listings ({listings.length})</h2>
-    <a href="/admin/listings/new" class="btn">+ New Listing</a>
+    <h2>{t('admin.all_listings')} ({listings.length})</h2>
+    <a href="/admin/listings/new" class="btn">+ {t('admin.create_listing')}</a>
   </div>
 
   <div class="card" style="padding: 0;">
     <table style="width: 100%; border-collapse: collapse; text-align: left;">
       <thead>
         <tr style="border-bottom: 1px solid #e4e4e7; background: #f8f8f8;">
-          <th style="padding: 1rem;">Title</th>
-          <th style="padding: 1rem;">Category</th>
-          <th style="padding: 1rem;">Type</th>
-          <th style="padding: 1rem;">Price</th>
-          <th style="padding: 1rem;">Status</th>
-          <th style="padding: 1rem;">Actions</th>
+          <th style="padding: 1rem;">{t('admin.title')}</th>
+          <th style="padding: 1rem;">{t('admin.main_category')}</th>
+          <th style="padding: 1rem;">{t('admin.property_type')}</th>
+          <th style="padding: 1rem;">{t('admin.price')}</th>
+          <th style="padding: 1rem;">{t('admin.status')}</th>
+          <th style="padding: 1rem;">{t('admin.actions')}</th>
         </tr>
       </thead>
       <tbody>
@@ -42,8 +45,8 @@ const { results: listings } = await db.prepare(`
           listings.map((l: any) => (
             <tr style="border-bottom: 1px solid #e4e4e7;">
               <td style="padding: 1rem; font-weight: 500;">{l.title || 'Untitled'}</td>
-              <td style="padding: 1rem; text-transform: capitalize;">{l.main_category?.replace('_', ' ')}</td>
-              <td style="padding: 1rem; text-transform: capitalize;">{l.property_type}</td>
+              <td style="padding: 1rem; text-transform: capitalize;">{dict[`category.${l.main_category}`] || l.main_category?.replace('_', ' ')}</td>
+              <td style="padding: 1rem; text-transform: capitalize;">{dict[`type.${l.property_type}`] || l.property_type}</td>
               <td style="padding: 1rem;">€{l.price?.toLocaleString()}</td>
               <td style="padding: 1rem;">
                 <span style="background: #e4e4e7; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
@@ -52,8 +55,8 @@ const { results: listings } = await db.prepare(`
               </td>
               <td style="padding: 1rem;">
                 <div style="display: flex; gap: 0.5rem;">
-                  <a href={`/admin/listings/${l.id}`} class="btn" style="background: #2563eb; color: white;">Edit</a>
-                  <button onclick={`deleteListing('${l.id}')`} class="btn" style="background: #dc2626; color: white;">Delete</button>
+                  <a href={`/admin/listings/${l.id}`} class="btn" style="background: #2563eb; color: white;">{t('admin.update')}</a>
+                  <button onclick={`deleteListing('${l.id}')`} class="btn" style="background: #dc2626; color: white;">{t('admin.delete')}</button>
                 </div>
               </td>
             </tr>

@@ -1,14 +1,20 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../lib/i18n.js';
+
+const db = Astro.locals.runtime?.env?.DB;
+const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, adminLang) || {};
+const t = (key: string) => dict[key] || key;
 ---
 
-<AdminLayout title="Dashboard">
+<AdminLayout title={t('admin.dashboard')}>
   <div class="card">
     <h3>Welcome back!</h3>
     <p>Your Cloudflare Access authentication is active and the D1 Database is connected.</p>
     
     <div style="margin-top: 2rem;">
-      <a href="/admin/listings/new" class="btn">Create New Listing</a>
+      <a href="/admin/listings/new" class="btn">{t('admin.create_listing')}</a>
     </div>
   </div>
 </AdminLayout>

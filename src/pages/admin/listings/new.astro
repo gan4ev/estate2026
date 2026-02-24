@@ -12,23 +12,23 @@ const stages = Object.entries(dict).filter(([k]) => k.startsWith('stage.')).map(
 const extras = Object.entries(dict).filter(([k]) => k.startsWith('extra.')).map(([k, v]) => ({ value: k.replace('extra.', ''), label: v }));
 ---
 
-<AdminLayout title="Create New Listing">
+<AdminLayout title={t('admin.create_listing')}>
   <div class="card" style="max-width: 600px;">
     <form id="listingForm">
       
       <div class="form-group">
-        <label for="title">Title (English) *</label>
+        <label for="title">{t('admin.title')} ({t('en')}) *</label>
         <input type="text" id="title" name="title" required placeholder="e.g., Luxury 2-Bedroom Apartment in Downtown" />
       </div>
 
       <div class="form-group">
-        <label for="description">Description *</label>
+        <label for="description">{t('admin.description')} *</label>
         <textarea id="description" name="description" required placeholder="Detailed description of the property..."></textarea>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
         <div class="form-group">
-          <label for="main_category">Main Category *</label>
+          <label for="main_category">{t('admin.main_category')} *</label>
           <select id="main_category" name="main_category" required>
             {categories.map(c => (
               <option value={c.value}>{c.label}</option>
@@ -36,7 +36,7 @@ const extras = Object.entries(dict).filter(([k]) => k.startsWith('extra.')).map(
           </select>
         </div>
         <div class="form-group">
-          <label for="property_type">Property Type *</label>
+          <label for="property_type">{t('admin.property_type')} *</label>
           <select id="property_type" name="property_type" required>
             {types.map(t => (
               <option value={t.value}>{t.label}</option>
@@ -47,37 +47,37 @@ const extras = Object.entries(dict).filter(([k]) => k.startsWith('extra.')).map(
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
         <div class="form-group">
-          <label for="stage">Construction Stage</label>
+          <label for="stage">{t('admin.stage')}</label>
           <select id="stage" name="stage">
-            <option value="">-- Select Stage --</option>
+            <option value="">-- {t('admin.stage')} --</option>
             {stages.map(s => (
               <option value={s.value}>{s.label}</option>
             ))}
           </select>
         </div>
         <div class="form-group">
-          <label for="price">Price (€) *</label>
+          <label for="price">{t('admin.price')} (€) *</label>
           <input type="number" id="price" name="price" required min="0" step="1" />
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
         <div class="form-group">
-          <label for="bedrooms">Bedrooms</label>
+          <label for="bedrooms">{t('admin.bedrooms')}</label>
           <input type="number" id="bedrooms" name="bedrooms" min="0" value="0" />
         </div>
         <div class="form-group">
-          <label for="bathrooms">Bathrooms</label>
+          <label for="bathrooms">{t('admin.bathrooms')}</label>
           <input type="number" id="bathrooms" name="bathrooms" min="0" value="0" />
         </div>
         <div class="form-group">
-          <label for="area_sqm">Area (m²)</label>
+          <label for="area_sqm">{t('admin.area')} (m²)</label>
           <input type="number" id="area_sqm" name="area_sqm" min="0" value="0" />
         </div>
       </div>
 
       <div class="form-group" style="margin-top: 1rem;">
-          <label>Property Extras & Amenities</label>
+          <label>{t('admin.extras')}</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; background: #fafafa; padding: 1rem; border: 1px solid #e4e4e7; border-radius: 6px;">
               {extras.map(e => (
                 <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
@@ -85,12 +85,11 @@ const extras = Object.entries(dict).filter(([k]) => k.startsWith('extra.')).map(
                 </label>
               ))}
           </div>
-          <small style="color: #71717a; display: block; margin-top: 0.5rem;">These are pulled from your Site Translations dictionary.</small>
       </div>
 
       <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
-        <button type="submit" class="btn" id="submitBtn">Save Listing</button>
-        <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">Cancel</a>
+        <button type="submit" class="btn" id="submitBtn">{t('admin.save')}</button>
+        <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">{t('admin.cancel')}</a>
         <span id="formStatus" style="font-size: 0.875rem; color: #16a34a; display: none;">Saving...</span>
       </div>
 

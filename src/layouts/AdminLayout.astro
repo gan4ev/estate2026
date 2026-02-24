@@ -1,5 +1,5 @@
 ---
-import { getAvailableLanguages } from '../lib/i18n.js';
+import { getAvailableLanguages, getDictionary } from '../lib/i18n.js';
 
 const db = Astro.locals.runtime?.env?.DB;
 const user = Astro.locals.user;
@@ -7,6 +7,8 @@ const pathname = Astro.url.pathname;
 
 const langs = await getAvailableLanguages(db);
 const currentAdminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, currentAdminLang) || {};
+const t = (key: string) => dict[key] || key;
 
 export interface Props {
 	title: string;
@@ -122,10 +124,10 @@ const { title } = Astro.props;
     <aside>
       <h2>Estate 2026</h2>
       <nav>
-        <a href="/admin" class={pathname === '/admin' ? 'active' : ''}>Dashboard</a>
-        <a href="/admin/listings" class={pathname.includes('/admin/listings') ? 'active' : ''}>Properties</a>
-        <a href="/admin/translations" class={pathname.includes('/admin/translations') ? 'active' : ''}>Translations</a>
-        <a href="/">← Back to Site</a>
+        <a href="/admin" class={pathname === '/admin' ? 'active' : ''}>{t('admin.dashboard')}</a>
+        <a href="/admin/listings" class={pathname.includes('/admin/listings') ? 'active' : ''}>{t('admin.properties')}</a>
+        <a href="/admin/translations" class={pathname.includes('/admin/translations') ? 'active' : ''}>{t('admin.translations')}</a>
+        <a href="/">{t('admin.back_to_site')}</a>
       </nav>
     </aside>
 

@@ -33,12 +33,12 @@ const { results: extrasResults } = await db.prepare(`
 const activeExtras = extrasResults.map((r: any) => r.extra_key);
 ---
 
-<AdminLayout title="Edit Listing">
+<AdminLayout title={t('admin.edit_listing')}>
   <div class="card" style="max-width: 600px;">
     <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: start;">
         <div>
-            <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">&larr; Back to Listings</a>
-            <h2 style="margin: 0.5rem 0 0 0;">Editing Properties</h2>
+            <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">&larr; {t('admin.all_listings')}</a>
+            <h2 style="margin: 0.5rem 0 0 0;">{t('admin.edit_listing')}</h2>
         </div>
         <span style="background: #e4e4e7; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; text-transform: uppercase;">
             ID: {id?.slice(0,8)}...
@@ -48,18 +48,18 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
     <form id="editListingForm">
       
       <div class="form-group">
-        <label for="title">Title (English) *</label>
+        <label for="title">{t('admin.title')} ({t('en')}) *</label>
         <input type="text" id="title" name="title" required value={listing.title} />
       </div>
 
       <div class="form-group">
-        <label for="description">Description *</label>
+        <label for="description">{t('admin.description')} *</label>
         <textarea id="description" name="description" required>{listing.description}</textarea>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
         <div class="form-group">
-          <label for="main_category">Main Category *</label>
+          <label for="main_category">{t('admin.main_category')} *</label>
           <select id="main_category" name="main_category" required>
             {categories.map(c => (
               <option value={c.value} selected={listing.main_category === c.value}>{c.label}</option>
@@ -67,7 +67,7 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
           </select>
         </div>
         <div class="form-group">
-          <label for="property_type">Property Type *</label>
+          <label for="property_type">{t('admin.property_type')} *</label>
           <select id="property_type" name="property_type" required>
             {types.map(t => (
               <option value={t.value} selected={listing.property_type === t.value}>{t.label}</option>
@@ -78,37 +78,37 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
         <div class="form-group">
-          <label for="stage">Construction Stage</label>
+          <label for="stage">{t('admin.stage')}</label>
           <select id="stage" name="stage">
-            <option value="">-- Select Stage --</option>
+            <option value="">-- {t('admin.stage')} --</option>
             {stages.map(s => (
               <option value={s.value} selected={listing.stage === s.value}>{s.label}</option>
             ))}
           </select>
         </div>
         <div class="form-group">
-          <label for="price">Price (€) *</label>
+          <label for="price">{t('admin.price')} (€) *</label>
           <input type="number" id="price" name="price" required min="0" step="1" value={listing.price} />
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
         <div class="form-group">
-          <label for="bedrooms">Bedrooms</label>
+          <label for="bedrooms">{t('admin.bedrooms')}</label>
           <input type="number" id="bedrooms" name="bedrooms" min="0" value={listing.bedrooms} />
         </div>
         <div class="form-group">
-          <label for="bathrooms">Bathrooms</label>
+          <label for="bathrooms">{t('admin.bathrooms')}</label>
           <input type="number" id="bathrooms" name="bathrooms" min="0" value={listing.bathrooms} />
         </div>
         <div class="form-group">
-          <label for="area_sqm">Area (m²)</label>
+          <label for="area_sqm">{t('admin.area')} (m²)</label>
           <input type="number" id="area_sqm" name="area_sqm" min="0" value={listing.area_sqm} />
         </div>
       </div>
 
       <div class="form-group">
-        <label for="status">Publishing Status</label>
+        <label for="status">{t('admin.status')}</label>
         <select id="status" name="status">
           <option value="draft" selected={listing.status === 'draft'}>Draft</option>
           <option value="published" selected={listing.status === 'published'}>Published</option>
@@ -117,7 +117,7 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
       </div>
 
       <div class="form-group" style="margin-top: 1rem;">
-          <label>Property Extras & Amenities</label>
+          <label>{t('admin.extras')}</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; background: #fafafa; padding: 1rem; border: 1px solid #e4e4e7; border-radius: 6px;">
               {extras.map(e => (
                 <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
@@ -125,13 +125,12 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
                 </label>
               ))}
           </div>
-          <small style="color: #71717a; display: block; margin-top: 0.5rem;">These are pulled from your Site Translations dictionary.</small>
       </div>
 
       <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
-        <button type="submit" class="btn" id="updateBtn">Update Listing</button>
-        <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">Cancel</a>
-        <span id="formStatus" style="font-size: 0.875rem; color: #16a34a; display: none;">Updating...</span>
+        <button type="submit" class="btn" id="updateBtn">{t('admin.update')}</button>
+        <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">{t('admin.cancel')}</a>
+        <span id="formStatus" style="font-size: 0.875rem; color: #16a34a; display: none;">{t('admin.update')}...</span>
       </div>
 
     </form>

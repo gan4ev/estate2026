@@ -1,11 +1,17 @@
 ---
+import { getDictionary } from '../../lib/i18n.js';
+const db = Astro.locals.runtime?.env?.DB;
+const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, adminLang) || {};
+const t = (key: string) => dict[key] || key;
 const error = Astro.url.searchParams.get('error');
 ---
 <!DOCTYPE html>
-<html lang="en">
+<html lang={adminLang}>
 <head>
     <meta charset="UTF-8">
-    <title>Admin Login | Estate 2026</title>
+    <title>{t('admin.sign_in')} | Estate 2026</title>
+    {/* ... styles ... */}
     <style>
         body { 
           font-family: system-ui, -apple-system, sans-serif; 
@@ -54,21 +60,21 @@ const error = Astro.url.searchParams.get('error');
     <div class="card">
         <h2 style="margin-top: 0; text-align: center;">Estate 2026 Admin</h2>
         <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 1.5rem; text-align: center;">
-            Cloudflare Access bypassed.<br>Please log in locally.
+            Please log in to manage your listings.
         </p>
         
         {error && <div class="error">{error}</div>}
 
         <form method="POST" action="/api/admin/login">
             <div class="form-group">
-                <label for="email">Admin Email Address</label>
-                <input type="email" id="email" name="email" required placeholder="gan4ev@gmail.com">
+                <label for="email">{t('admin.email') || 'Email'}</label>
+                <input type="email" id="email" name="email" required placeholder="admin@example.com">
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required placeholder="Enter password">
+                <label for="password">{t('admin.password') || 'Password'}</label>
+                <input type="password" id="password" name="password" required placeholder="••••••••">
             </div>
-            <button type="submit">Sign In to Dashboard</button>
+            <button type="submit">{t('admin.sign_in')}</button>
         </form>
     </div>
 </body>

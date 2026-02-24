@@ -1,25 +1,23 @@
+import en from '../i18n/en.json';
+import bg from '../i18n/bg.json';
+
+const dictionaries = {
+    en,
+    bg
+};
+
 export async function getDictionary(db, lang) {
-    if (!db) return null;
-    try {
-        const { results } = await db.prepare('SELECT dictionary FROM site_translations WHERE lang = ?').bind(lang).all();
-        if (results && results.length > 0) {
-            return JSON.parse(results[0].dictionary);
-        }
-    } catch (e) {
-        console.error("I18n DB Error:", e);
+    // Priority 1: Static Files (Fastest)
+    if (dictionaries[lang]) {
+        return dictionaries[lang];
     }
-    return null;
+
+    // Fallback: If we ever add more languages dynamically via DB back in the future
+    // but the user specifically asked for files now.
+    return dictionaries['en'];
 }
 
 export async function getAvailableLanguages(db) {
-    if (!db) return ['en', 'bg']; // Safe fallback if DB is missing during build
-    try {
-        const { results } = await db.prepare('SELECT lang FROM site_translations').all();
-        if (results && results.length > 0) {
-            return results.map(row => row.lang);
-        }
-    } catch (e) {
-        console.error("I18n DB Error:", e);
-    }
-    return ['en', 'bg'];
+    return Object.keys(dictionaries);
 }
+
