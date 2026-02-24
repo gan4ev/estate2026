@@ -4,7 +4,8 @@ import { getDictionary } from '../../../lib/i18n.js';
 
 const { id } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
-const dict = await getDictionary(db, 'en') || {};
+const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, adminLang) || {};
 
 const categories = Object.entries(dict).filter(([k]) => k.startsWith('category.')).map(([k, v]) => ({ value: k.replace('category.', ''), label: v }));
 const types = Object.entries(dict).filter(([k]) => k.startsWith('type.')).map(([k, v]) => ({ value: k.replace('type.', ''), label: v }));

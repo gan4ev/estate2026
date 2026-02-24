@@ -3,12 +3,14 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
 // We can fetch data directly in the Astro component using the D1 binding!
 const db = Astro.locals.runtime.env.DB;
+const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+
 const { results: listings } = await db.prepare(`
   SELECT l.*, i.title 
   FROM listings l
-  LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = 'en'
+  LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
   ORDER BY l.created_at DESC
-`).all();
+`).bind(adminLang).all();
 ---
 
 <AdminLayout title="Manage Properties">

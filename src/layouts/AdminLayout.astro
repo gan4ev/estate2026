@@ -1,6 +1,12 @@
 ---
+import { getAvailableLanguages } from '../lib/i18n.js';
+
+const db = Astro.locals.runtime?.env?.DB;
 const user = Astro.locals.user;
 const pathname = Astro.url.pathname;
+
+const langs = await getAvailableLanguages(db);
+const currentAdminLang = Astro.cookies.get('admin_lang')?.value || 'en';
 
 export interface Props {
 	title: string;
@@ -126,10 +132,25 @@ const { title } = Astro.props;
     <main>
       <header>
         <h1>{title}</h1>
-        <div class="user-badge">
-          {user?.email} ({user?.role})
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <select id="adminLangSwitcher" style="width: auto; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
+            {langs.map(l => (
+              <option value={l} selected={l === currentAdminLang}>{l.toUpperCase()}</option>
+            ))}
+          </select>
+          <div class="user-badge">
+            {user?.email} ({user?.role})
+          </div>
         </div>
       </header>
+
+      <script is:inline>
+        document.getElementById('adminLangSwitcher')?.addEventListener('change', (e) => {
+          const lang = e.target.value;
+          document.cookie = `admin_lang=${lang}; path=/; max-age=31536000`;
+          window.location.reload();
+        });
+      </script>
 
       <slot />
 
