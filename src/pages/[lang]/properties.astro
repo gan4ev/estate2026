@@ -340,7 +340,9 @@ const hasFilters = searchQuery || priceMin || priceMax || bedroomsMin || propTyp
             </select>
           </div>
 
-          <button type="submit" class="apply-btn">Apply Filters</button>
+          <!-- Hidden submit — form auto-submits via JS -->
+          <button type="submit" style="display:none" aria-hidden="true"></button>
+          <p style="font-size:0.75rem;color:#a1a1aa;text-align:center;margin:0.5rem 0 0;">⚡ Filters apply instantly</p>
           <a href={`/${lang}/properties`} class="clear-link">Clear all filters</a>
         </form>
       </aside>
@@ -399,5 +401,42 @@ const hasFilters = searchQuery || priceMin || priceMax || bedroomsMin || propTyp
         )}
       </div>
     </div>
+  <script is:inline>
+    (function () {
+      const form = document.getElementById('filterForm');
+      if (!form) return;
+
+      let debounceTimer;
+
+      // Debounced submit for text & number inputs (wait 500ms after typing stops)
+      function debouncedSubmit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => form.submit(), 500);
+      }
+
+      // Immediate submit for selects and hidden inputs (set by bed/cat buttons)
+      function immediateSubmit() {
+        clearTimeout(debounceTimer);
+        form.submit();
+      }
+
+      form.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
+        input.addEventListener('input', debouncedSubmit);
+      });
+
+      form.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', immediateSubmit);
+      });
+
+      // Bed & Category buttons call immediateSubmit after updating the hidden input
+      // We patch the onclick to also trigger form submit
+      form.querySelectorAll('.bed-btn, .cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          // Give the hidden input time to be set by the inline onclick
+          setTimeout(immediateSubmit, 20);
+        });
+      });
+    })();
+  </script>
   </body>
 </html>
