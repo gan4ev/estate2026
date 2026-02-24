@@ -10,6 +10,25 @@ const fallbackDict = await getDictionary(db, 'en') || {};
 const t = (key) => dict[key] || fallbackDict[key] || key;
 
 const user = Astro.locals.user;
+
+// Fetch latest 2 published properties
+const { results: latestProperties } = await db.prepare(`
+    SELECT 
+        l.id, 
+        l.price, 
+        l.bedrooms, 
+        l.area_sqm,
+        l.created_at,
+        i.title, 
+        i.description,
+        (SELECT r2_key FROM media WHERE listing_id = l.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as main_image,
+        (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name
+    FROM listings l
+    LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
+    WHERE l.status = 'published'
+    ORDER BY l.created_at DESC
+    LIMIT 2
+`).bind(lang, lang).all();
 ---
 
 <!DOCTYPE html>
@@ -21,8 +40,8 @@ const user = Astro.locals.user;
     <style>
       body {
         margin: 0;
-        font-family: system-ui, -apple-system, sans-serif;
-        color: #333;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: #18181b;
         background: #fafafa;
       }
       header {
@@ -32,14 +51,20 @@ const user = Astro.locals.user;
         padding: 1rem 2rem;
         background: #fff;
         border-bottom: 1px solid #eaeaea;
+        position: sticky;
+        top: 0;
+        z-index: 50;
       }
       a {
         text-decoration: none;
         color: inherit;
+        transition: color 0.2s;
       }
       .logo {
-        font-weight: bold;
-        font-size: 1.25rem;
+        font-weight: 800;
+        font-size: 1.5rem;
+        letter-spacing: -0.025em;
+        color: #000;
       }
       nav {
         display: flex;
@@ -47,40 +72,177 @@ const user = Astro.locals.user;
         align-items: center;
       }
       nav a {
-        color: #555;
+        color: #71717a;
+        font-weight: 500;
+        font-size: 0.9375rem;
       }
       nav a:hover {
         color: #000;
       }
       .lang-switcher {
-        margin-left: 1.5rem;
+        display: flex;
+        gap: 0.75rem;
+        margin-left: 1rem;
+        padding-left: 1rem;
+        border-left: 1px solid #e4e4e7;
       }
       .lang-switcher a {
-        margin-left: 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #a1a1aa;
       }
       .lang-switcher a[data-active="true"] {
-        font-weight: bold;
         color: #000;
       }
-      main {
+      .hero {
         text-align: center;
-        padding: 6rem 2rem;
+        padding: 8rem 2rem 6rem;
+        background: linear-gradient(to bottom, #fff, #f4f4f5);
       }
-      h1 {
-        font-size: 3rem;
-        margin-bottom: 1rem;
+      .hero h1 {
+        font-size: 4rem;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+        margin: 0 0 1.5rem;
+        line-height: 1;
+      }
+      .hero p {
+          max-width: 600px;
+          margin: 0 auto 2.5rem;
+          color: #71717a;
+          font-size: 1.25rem;
+          line-height: 1.6;
       }
       .cta {
         display: inline-block;
-        margin-top: 2rem;
-        padding: 0.75rem 2rem;
-        background: #000;
+        padding: 1rem 2.5rem;
+        background: #18181b;
         color: #fff;
-        border-radius: 4px;
-        font-weight: 500;
+        border-radius: 99px;
+        font-weight: 600;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        transition: transform 0.2s, background 0.2s;
       }
       .cta:hover {
-        background: #333;
+        background: #000;
+        transform: translateY(-2px);
+      }
+
+      .section {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 4rem 2rem;
+      }
+
+      .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-bottom: 2.5rem;
+      }
+
+      .section-header h2 {
+          font-size: 2rem;
+          font-weight: 800;
+          margin: 0;
+          letter-spacing: -0.025em;
+      }
+
+      .property-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 2rem;
+      }
+
+      .property-card {
+          background: #fff;
+          border-radius: 16px;
+          overflow: hidden;
+          border: 1px solid #e4e4e7;
+          transition: transform 0.3s, box-shadow 0.3s;
+          display: flex;
+          flex-direction: column;
+      }
+
+      .property-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+      }
+
+      .property-image {
+          position: relative;
+          aspect-ratio: 16/10;
+          background: #f4f4f5;
+      }
+
+      .property-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+      }
+
+      .property-price {
+          position: absolute;
+          bottom: 1rem;
+          left: 1rem;
+          background: #fff;
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
+          font-weight: 800;
+          font-size: 1.25rem;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      }
+
+      .property-content {
+          padding: 1.5rem;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+      }
+
+      .property-title {
+          font-size: 1.25rem;
+          font-weight: 700;
+          margin: 0 0 0.5rem;
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+      }
+
+      .property-area {
+          color: #71717a;
+          font-size: 0.875rem;
+          margin-bottom: 1.5rem;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+      }
+
+      .property-info {
+          display: flex;
+          gap: 1.5rem;
+          padding-top: 1.25rem;
+          border-top: 1px solid #f4f4f5;
+          margin-top: auto;
+      }
+
+      .info-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.875rem;
+          color: #3f3f46;
+          font-weight: 500;
+      }
+
+      .info-item .icon {
+          color: #a1a1aa;
+      }
+
+      @media (max-width: 768px) {
+          .hero h1 { font-size: 2.5rem; }
+          .property-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -89,6 +251,7 @@ const user = Astro.locals.user;
       <a href={`/${lang}`} class="logo">{t('title')}</a>
       <nav>
         <a href={`/${lang}`}>{t('nav.home')}</a>
+        <a href={`/${lang}/properties`}>{t('nav.properties') || 'Properties'}</a>
         <a href={`/${lang}/contact`}>{t('nav.contact')}</a>
         <span class="lang-switcher">
           {langs.map(l => (
@@ -99,20 +262,69 @@ const user = Astro.locals.user;
         </span>
         {user ? (
           <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: 1rem;">
-             <a href="/admin" style="padding: 0.25rem 0.5rem; background: #18181b; color: white; border-radius: 4px; font-size: 0.875rem;">{t('admin.dashboard')}</a>
+             <a href="/admin" style="padding: 0.4rem 0.8rem; background: #18181b; color: white; border-radius: 8px; font-size: 0.875rem; font-weight: 600;">{t('admin.dashboard')}</a>
              <form method="POST" action="/api/admin/logout" style="margin: 0;">
-                <button type="submit" style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 0.875rem; padding: 0.25rem 0.5rem;">{t('admin.logout')}</button>
+                <button type="submit" style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 0.875rem; padding: 0.25rem 0.5rem; font-weight: 600;">{t('admin.logout')}</button>
              </form>
           </div>
         ) : (
-          <a href="/admin/login" style="margin-left: 1rem; padding: 0.25rem 0.5rem; border: 1px solid #18181b; color: #18181b; border-radius: 4px; font-size: 0.875rem;">{t('admin.sign_in')}</a>
+          <a href="/admin/login" style="margin-left: 1rem; padding: 0.4rem 0.8rem; border: 1px solid #e4e4e7; color: #18181b; border-radius: 8px; font-size: 0.875rem; font-weight: 600;">{t('admin.sign_in')}</a>
         )}
       </nav>
     </header>
 
-    <main>
+    <div class="hero">
       <h1>{t('hero.headline')}</h1>
+      <p>{t('hero.subheadline') || 'Discover the most exclusive properties in premium locations. Your dream home is just one click away.'}</p>
       <a href={`/${lang}/properties`} class="cta">{t('hero.cta')}</a>
-    </main>
+    </div>
+
+    {latestProperties?.length > 0 && (
+        <section class="section">
+            <div class="section-header">
+                <div>
+                    <h2>{t('home.latest_title') || 'Featured Selection'}</h2>
+                    <p style="color: #71717a; margin-top: 0.5rem;">{t('home.latest_subtitle') || 'Our most recent hand-picked real estate opportunities.'}</p>
+                </div>
+                <a href={`/${lang}/properties`} style="font-weight: 700; color: #000; font-size: 0.9375rem; border-bottom: 2px solid #e4e4e7; padding-bottom: 2px;">
+                    {t('home.view_all') || 'View All'} &rarr;
+                </a>
+            </div>
+
+            <div class="property-grid">
+                {latestProperties.map(p => (
+                    <a href={`/${lang}/properties/${p.id}`} class="property-card">
+                        <div class="property-image">
+                            {p.main_image ? (
+                                <img src={`/api/media/${p.main_image}`} alt={p.title} />
+                            ) : (
+                                <div style="width: 100%; height: 100%; background: #f4f4f5; display: flex; align-items: center; justify-content: center; color: #a1a1aa;">No image</div>
+                            )}
+                            <div class="property-price">
+                                {new Intl.NumberFormat(lang === 'bg' ? 'bg-BG' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(p.price)}
+                            </div>
+                        </div>
+                        <div class="property-content">
+                            <h3 class="property-title">{p.title || 'Property Listing'}</h3>
+                            <div class="property-area">
+                                📍 {p.area_name || 'Premium Location'}
+                            </div>
+                            
+                            <div class="property-info">
+                                <div class="info-item">
+                                    <span class="icon">🛏️</span>
+                                    <span>{p.bedrooms || 0} {t('listing.bedrooms') || 'Beds'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="icon">📐</span>
+                                    <span>{p.area_sqm || 0} m²</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                ))}
+            </div>
+        </section>
+    )}
   </body>
 </html>

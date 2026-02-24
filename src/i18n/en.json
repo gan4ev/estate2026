@@ -58,5 +58,11 @@
     "admin.name_en": "Name (English)",
     "admin.name_bg": "Name (Bulgarian)",
     "admin.media": "Media & Gallery",
-    "admin.add_images": "Add Images"
+    "admin.add_images": "Add Images",
+    "nav.properties": "Properties",
+    "hero.subheadline": "Discover the most exclusive properties in premium locations. Your dream home is just one click away.",
+    "home.latest_title": "Featured Selection",
+    "home.latest_subtitle": "Our most recent hand-picked real estate opportunities.",
+    "home.view_all": "View All",
+    "listing.bedrooms": "Beds"
 }
