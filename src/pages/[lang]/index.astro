@@ -1,0 +1,35 @@
+---
+import { t, getAvailableLanguages } from '../../lib/i18n.js';
+
+const { lang } = Astro.params;
+const langs = getAvailableLanguages();
+---
+
+<!DOCTYPE html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <title>{t(lang, 'title')}</title>
+  </head>
+  <body>
+    <header>
+      <a href={`/${lang}`}>{t(lang, 'title')}</a>
+      <nav>
+        <a href={`/${lang}`}>{t(lang, 'nav.home')}</a>
+        <a href={`/${lang}/contact`}>{t(lang, 'nav.contact')}</a>
+        <span>
+          {langs.map(l => (
+            <a href={`/${l}`} style={{ marginLeft: '10px', fontWeight: l === lang ? 'bold' : 'normal' }}>
+              {l.toUpperCase()}
+            </a>
+          ))}
+        </span>
+      </nav>
+    </header>
+
+    <main>
+      <h1>{t(lang, 'hero.headline')}</h1>
+      <a href={`/${lang}/properties`}>{t(lang, 'hero.cta')}</a>
+    </main>
+  </body>
+</html>
