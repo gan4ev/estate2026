@@ -1,0 +1,54 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+// We can fetch data directly in the Astro component using the D1 binding!
+const db = Astro.locals.runtime.env.DB;
+const { results: listings } = await db.prepare(`
+  SELECT l.*, i.title 
+  FROM listings l
+  LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = 'en'
+  ORDER BY l.created_at DESC
+`).all();
+---
+
+<AdminLayout title="Manage Properties">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2>All Listings ({listings.length})</h2>
+    <a href="/admin/listings/new" class="btn">+ New Listing</a>
+  </div>
+
+  <div class="card" style="padding: 0;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+      <thead>
+        <tr style="border-bottom: 1px solid #e4e4e7; background: #f8f8f8;">
+          <th style="padding: 1rem;">Title</th>
+          <th style="padding: 1rem;">Type</th>
+          <th style="padding: 1rem;">Price</th>
+          <th style="padding: 1rem;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {listings.length === 0 ? (
+          <tr>
+            <td colspan="4" style="padding: 2rem; text-align: center; color: #71717a;">
+              No properties found. Create your first listing to get started!
+            </td>
+          </tr>
+        ) : (
+          listings.map((l: any) => (
+            <tr style="border-bottom: 1px solid #e4e4e7;">
+              <td style="padding: 1rem; font-weight: 500;">{l.title || 'Untitled'}</td>
+              <td style="padding: 1rem; text-transform: capitalize;">{l.type}</td>
+              <td style="padding: 1rem;">€{l.price?.toLocaleString()}</td>
+              <td style="padding: 1rem;">
+                <span style="background: #e4e4e7; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                  {l.status}
+                </span>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

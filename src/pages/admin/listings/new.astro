@@ -1,0 +1,94 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Create New Listing">
+  <div class="card" style="max-width: 600px;">
+    <form id="listingForm">
+      
+      <div class="form-group">
+        <label for="title">Title (English) *</label>
+        <input type="text" id="title" name="title" required placeholder="e.g., Luxury 2-Bedroom Apartment in Downtown" />
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description *</label>
+        <textarea id="description" name="description" required placeholder="Detailed description of the property..."></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label for="type">Property Type</label>
+          <select id="type" name="type">
+            <option value="apartment">Apartment</option>
+            <option value="house">House</option>
+            <option value="commercial">Commercial</option>
+            <option value="land">Land</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="price">Price (€) *</label>
+          <input type="number" id="price" name="price" required min="0" step="1000" />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label for="bedrooms">Bedrooms</label>
+          <input type="number" id="bedrooms" name="bedrooms" min="0" value="0" />
+        </div>
+        <div class="form-group">
+          <label for="bathrooms">Bathrooms</label>
+          <input type="number" id="bathrooms" name="bathrooms" min="0" value="0" />
+        </div>
+        <div class="form-group">
+          <label for="area_sqm">Area (m²)</label>
+          <input type="number" id="area_sqm" name="area_sqm" min="0" value="0" />
+        </div>
+      </div>
+
+      <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
+        <button type="submit" class="btn" id="submitBtn">Save Listing</button>
+        <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">Cancel</a>
+        <span id="formStatus" style="font-size: 0.875rem; color: #16a34a; display: none;">Saving...</span>
+      </div>
+
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('listingForm') as HTMLFormElement;
+    const status = document.getElementById('formStatus');
+    const btn = document.getElementById('submitBtn') as HTMLButtonElement;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if(status) { status.style.display = 'inline'; status.textContent = 'Saving...'; status.style.color = '#71717a'; }
+      if(btn) btn.disabled = true;
+
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch('/api/admin/listings', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          if(status) { status.style.color = '#16a34a'; status.textContent = 'Saved successfully! Redirecting...'; }
+          setTimeout(() => {
+            window.location.href = '/admin/listings';
+          }, 1000);
+        } else {
+          throw new Error(result.error || 'Failed to save listing');
+        }
+      } catch (err: any) {
+        if(status) { status.style.color = '#dc2626'; status.textContent = err.message; }
+        if(btn) btn.disabled = false;
+      }
+    });
+  </script>
+</AdminLayout>

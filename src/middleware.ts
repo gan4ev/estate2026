@@ -1,7 +1,12 @@
 import { defineMiddleware } from 'astro:middleware';
 
 export const onRequest = defineMiddleware(async (context, next) => {
-    const { url, request, locals } = context;
+    const { url, request, locals, cookies, redirect } = context;
+
+    // Allow the fallback login page to pass through completely unhindered
+    if (url.pathname === '/admin/login' || url.pathname === '/api/admin/login') {
+        return next();
+    }
 
     // Only protect /admin and /api/admin routes
     if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
@@ -12,20 +17,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
             return next();
         }
 
-        // In production, look for the Cloudflare Access authenticated email header
+        // Check for Cloudflare Access header OR our fallback cookie
         const cfUserEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
+        const fallbackEmailCookie = cookies.get('admin_fallback_email')?.value;
 
-        if (!cfUserEmail) {
-            // If no header, they shouldn't even be here (Cloudflare Access should block them first)
-            // But just in case Access is misconfigured, return 403 Forbidden.
-            return new Response('Unauthorized: Missing Cloudflare Access', { status: 403 });
+        const emailToVerify = cfUserEmail || fallbackEmailCookie;
+
+        if (!emailToVerify) {
+            // Redirect to our fallback login page instead of throwing an ugly 403 error
+            return redirect('/admin/login');
         }
 
         try {
             // Verify this user exists in our D1 database and is an admin
             const db = locals.runtime.env.DB;
             const { results } = await db.prepare('SELECT * FROM users WHERE email = ? AND role = ?')
-                .bind(cfUserEmail, 'admin')
+                .bind(emailToVerify, 'admin')
                 .all();
 
             if (!results || results.length === 0) {

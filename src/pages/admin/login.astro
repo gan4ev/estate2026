@@ -1,0 +1,100 @@
+---
+// Handle the POST request for login
+let error = "";
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+  const email = data.get('email')?.toString();
+  const password = data.get('password')?.toString();
+  
+  if (email && password) {
+    // Check if the email exists in our D1 database and is an admin
+    const db = Astro.locals.runtime.env.DB;
+    const { results } = await db.prepare('SELECT * FROM users WHERE email = ? AND password = ? AND role = ?').bind(email, password, 'admin').all();
+    
+    if (results && results.length > 0) {
+      // Set a secure cookie that the middleware will read
+      Astro.cookies.set('admin_fallback_email', email.toString(), { 
+        path: '/', 
+        httpOnly: true, 
+        secure: true, 
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+      });
+      return Astro.redirect('/admin');
+    } else {
+       error = "Access Denied: Invalid email or password.";
+    }
+  }
+}
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login | Estate 2026</title>
+    <style>
+        body { 
+          font-family: system-ui, -apple-system, sans-serif; 
+          background: #f4f4f5; 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          height: 100vh; 
+          margin: 0; 
+        }
+        .card { 
+          background: white; 
+          padding: 2.5rem; 
+          border-radius: 12px; 
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+          width: 100%; 
+          max-width: 360px; 
+        }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;}
+        input { 
+          width: 100%; 
+          padding: 0.75rem; 
+          border: 1px solid #d4d4d8; 
+          border-radius: 6px; 
+          box-sizing: border-box; 
+          font-size: 1rem;
+        }
+        button { 
+          width: 100%; 
+          padding: 0.75rem; 
+          background: #18181b; 
+          color: white; 
+          border: none; 
+          border-radius: 6px; 
+          cursor: pointer; 
+          font-weight: 600; 
+          font-size: 1rem;
+          transition: background 0.2s;
+        }
+        button:hover { background: #3f3f46; }
+        .error { color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem; padding: 0.5rem; background: #fef2f2; border-radius: 4px;}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 style="margin-top: 0; text-align: center;">Estate 2026 Admin</h2>
+        <p style="color: #71717a; font-size: 0.875rem; margin-bottom: 1.5rem; text-align: center;">
+            Cloudflare Access bypassed.<br>Please log in locally.
+        </p>
+        
+        {error && <div class="error">{error}</div>}
+
+        <form method="POST">
+            <div class="form-group">
+                <label for="email">Admin Email Address</label>
+                <input type="email" id="email" name="email" required placeholder="gan4ev@gmail.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter password">
+            </div>
+            <button type="submit">Sign In to Dashboard</button>
+        </form>
+    </div>
+</body>
+</html>
