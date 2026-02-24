@@ -25,11 +25,8 @@ export const POST: APIRoute = async ({ request, locals, cookies, redirect }) => 
         if (userCheck && userCheck.length > 0) {
             const user = userCheck[0];
 
-            if (user.password !== password) {
-                // Return exact mismatch to the UI so the user can see if there are hidden spaces
-                return redirect(`/admin/login?error=DEBUG:+DB+password+is+'${user.password}',+you+typed+'${password}'`);
-            } else if (user.role !== 'admin') {
-                return redirect(`/admin/login?error=DEBUG:+User+role+is+'${user.role}',+requires+'admin'`);
+            if (user.password !== password || user.role !== 'admin') {
+                return redirect(`/admin/login?error=Invalid+email+or+password`);
             } else {
                 // Success! Set cookie
                 cookies.set('admin_fallback_email', user.email, {
@@ -41,7 +38,7 @@ export const POST: APIRoute = async ({ request, locals, cookies, redirect }) => 
                 return redirect('/admin');
             }
         } else {
-            return redirect(`/admin/login?error=DEBUG:+Email+'${email}'+not+found+in+database.`);
+            return redirect(`/admin/login?error=Invalid+email+or+password`);
         }
     } catch (err: any) {
         return redirect(`/admin/login?error=Server+Error+${encodeURIComponent(err.message)}`);

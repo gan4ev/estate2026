@@ -106,12 +106,6 @@ const user = Astro.locals.user;
     </header>
 
     <main>
-      <div style="background: #fee2e2; padding: 1rem; margin-bottom: 2rem;">
-        <strong>DEBUG ADMIN:</strong><br/>
-        Cookie Value: {Astro.cookies.get('admin_fallback_email')?.value}<br/>
-        User object: {JSON.stringify(user)}<br/>
-        Runtime DB available: {!!Astro.locals.runtime?.env?.DB}<br/>
-      </div>
       <h1>{t(lang, 'hero.headline')}</h1>
       <a href={`/${lang}/properties`} class="cta">{t(lang, 'hero.cta')}</a>
     </main>
