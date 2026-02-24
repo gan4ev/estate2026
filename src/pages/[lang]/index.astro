@@ -9,17 +9,83 @@ const langs = getAvailableLanguages();
 <html lang={lang}>
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{t(lang, 'title')}</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #333;
+        background: #fafafa;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        background: #fff;
+        border-bottom: 1px solid #eaeaea;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      .logo {
+        font-weight: bold;
+        font-size: 1.25rem;
+      }
+      nav {
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+      }
+      nav a {
+        color: #555;
+      }
+      nav a:hover {
+        color: #000;
+      }
+      .lang-switcher {
+        margin-left: 1.5rem;
+      }
+      .lang-switcher a {
+        margin-left: 10px;
+      }
+      .lang-switcher a[data-active="true"] {
+        font-weight: bold;
+        color: #000;
+      }
+      main {
+        text-align: center;
+        padding: 6rem 2rem;
+      }
+      h1 {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+      .cta {
+        display: inline-block;
+        margin-top: 2rem;
+        padding: 0.75rem 2rem;
+        background: #000;
+        color: #fff;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+      .cta:hover {
+        background: #333;
+      }
+    </style>
   </head>
   <body>
     <header>
-      <a href={`/${lang}`}>{t(lang, 'title')}</a>
+      <a href={`/${lang}`} class="logo">{t(lang, 'title')}</a>
       <nav>
         <a href={`/${lang}`}>{t(lang, 'nav.home')}</a>
         <a href={`/${lang}/contact`}>{t(lang, 'nav.contact')}</a>
-        <span>
+        <span class="lang-switcher">
           {langs.map(l => (
-            <a href={`/${l}`} style={{ marginLeft: '10px', fontWeight: l === lang ? 'bold' : 'normal' }}>
+            <a href={`/${l}`} data-active={l === lang ? 'true' : 'false'}>
               {l.toUpperCase()}
             </a>
           ))}
@@ -29,7 +95,7 @@ const langs = getAvailableLanguages();
 
     <main>
       <h1>{t(lang, 'hero.headline')}</h1>
-      <a href={`/${lang}/properties`}>{t(lang, 'hero.cta')}</a>
+      <a href={`/${lang}/properties`} class="cta">{t(lang, 'hero.cta')}</a>
     </main>
   </body>
 </html>
