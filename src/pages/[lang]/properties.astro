@@ -3,32 +3,41 @@ import { getDictionary, getAvailableLanguages } from '../../lib/i18n.js';
 
 const db = Astro.locals.runtime?.env?.DB;
 const { lang } = Astro.params;
-const langs = await getAvailableLanguages(db);
+const url = new URL(Astro.request.url);
+const searchQuery = url.searchParams.get('q') || '';
 
+const langs = await getAvailableLanguages(db);
 const dict = await getDictionary(db, lang) || {};
 const fallbackDict = await getDictionary(db, 'en') || {};
 const t = (key) => dict[key] || fallbackDict[key] || key;
 
 const user = Astro.locals.user;
 
-// Fetch latest 2 published properties
-const { results: latestProperties } = await db.prepare(`
+// Fetch filtered properties
+let query = `
     SELECT 
         l.id, 
         l.price, 
         l.bedrooms, 
         l.area_sqm,
-        l.created_at,
         i.title, 
-        i.description,
         (SELECT r2_key FROM media WHERE listing_id = l.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as main_image,
         (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name
     FROM listings l
     LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
     WHERE l.status = 'published'
-    ORDER BY l.created_at DESC
-    LIMIT 5
-`).bind(lang, lang).all();
+`;
+
+const params = [lang, lang];
+
+if (searchQuery) {
+    query += ` AND (i.title LIKE ? OR i.description LIKE ?)`;
+    params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+}
+
+query += ` ORDER BY l.created_at DESC`;
+
+const { results: properties } = await db.prepare(query).bind(...params).all();
 ---
 
 <!DOCTYPE html>
@@ -36,7 +45,7 @@ const { results: latestProperties } = await db.prepare(`
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{t('title')}</title>
+    <title>{t('nav.properties')} - {t('title')}</title>
     <style>
       body {
         margin: 0;
@@ -94,64 +103,63 @@ const { results: latestProperties } = await db.prepare(`
       .lang-switcher a[data-active="true"] {
         color: #000;
       }
-      .hero {
-        text-align: center;
-        padding: 8rem 2rem 6rem;
-        background: linear-gradient(to bottom, #fff, #f4f4f5);
-      }
-      .hero h1 {
-        font-size: 4rem;
-        font-weight: 900;
-        letter-spacing: -0.05em;
-        margin: 0 0 1.5rem;
-        line-height: 1;
-      }
-      .hero p {
-          max-width: 600px;
-          margin: 0 auto 2.5rem;
-          color: #71717a;
-          font-size: 1.25rem;
-          line-height: 1.6;
-      }
-      .cta {
-        display: inline-block;
-        padding: 1rem 2.5rem;
-        background: #18181b;
-        color: #fff;
-        border-radius: 99px;
-        font-weight: 600;
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        transition: transform 0.2s, background 0.2s;
-      }
-      .cta:hover {
-        background: #000;
-        transform: translateY(-2px);
+
+      .search-section {
+          background: #fff;
+          border-bottom: 1px solid #e4e4e7;
+          padding: 3rem 2rem;
       }
 
-      .section {
+      .container {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 4rem 2rem;
       }
 
-      .section-header {
+      .search-form {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          margin-bottom: 2.5rem;
+          gap: 1rem;
+          max-width: 800px;
+          margin: 0 auto;
       }
 
-      .section-header h2 {
-          font-size: 2rem;
-          font-weight: 800;
-          margin: 0;
-          letter-spacing: -0.025em;
+      .search-input {
+          flex: 1;
+          padding: 0.75rem 1.5rem;
+          border: 1px solid #e4e4e7;
+          border-radius: 99px;
+          font-size: 1rem;
+          outline: none;
+          transition: border-color 0.2s;
+      }
+
+      .search-input:focus {
+          border-color: #000;
+      }
+
+      .search-btn {
+          padding: 0.75rem 2rem;
+          background: #18181b;
+          color: #fff;
+          border: none;
+          border-radius: 99px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s;
+      }
+
+      .search-btn:hover {
+          background: #000;
+      }
+
+      .results-section {
+          padding: 4rem 2rem;
       }
 
       .property-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
           gap: 2rem;
+          margin-top: 2rem;
       }
 
       .property-card {
@@ -204,19 +212,15 @@ const { results: latestProperties } = await db.prepare(`
           font-size: 1.25rem;
           font-weight: 700;
           margin: 0 0 0.5rem;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
+          white-space: nowrap;
           overflow: hidden;
+          text-overflow: ellipsis;
       }
 
       .property-area {
           color: #71717a;
           font-size: 0.875rem;
           margin-bottom: 1.5rem;
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
       }
 
       .property-info {
@@ -240,8 +244,14 @@ const { results: latestProperties } = await db.prepare(`
           color: #a1a1aa;
       }
 
-      @media (max-width: 768px) {
-          .hero h1 { font-size: 2.5rem; }
+      .empty-state {
+          text-align: center;
+          padding: 4rem;
+          color: #71717a;
+      }
+
+      @media (max-width: 640px) {
+          .search-form { flex-direction: column; }
           .property-grid { grid-template-columns: 1fr; }
       }
     </style>
@@ -251,11 +261,11 @@ const { results: latestProperties } = await db.prepare(`
       <a href={`/${lang}`} class="logo">{t('title')}</a>
       <nav>
         <a href={`/${lang}`}>{t('nav.home')}</a>
-        <a href={`/${lang}/properties`}>{t('nav.properties') || 'Properties'}</a>
+        <a href={`/${lang}/properties`} style="color: #000; font-weight: 700;">{t('nav.properties')}</a>
         <a href={`/${lang}/contact`}>{t('nav.contact')}</a>
         <span class="lang-switcher">
           {langs.map(l => (
-            <a href={`/${l}`} data-active={l === lang ? 'true' : 'false'}>
+            <a href={`/${l}/properties`} data-active={l === lang ? 'true' : 'false'}>
               {l.toUpperCase()}
             </a>
           ))}
@@ -273,26 +283,26 @@ const { results: latestProperties } = await db.prepare(`
       </nav>
     </header>
 
-    <div class="hero">
-      <h1>{t('hero.headline')}</h1>
-      <p>{t('hero.subheadline') || 'Discover the most exclusive properties in premium locations. Your dream home is just one click away.'}</p>
-      <a href={`/${lang}/properties`} class="cta">{t('hero.cta')}</a>
+    <div class="search-section">
+        <div class="container">
+            <h1 style="text-align: center; margin-bottom: 2rem; font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em;">{t('nav.properties')}</h1>
+            <form action={`/${lang}/properties`} class="search-form">
+                <input 
+                    type="text" 
+                    name="q" 
+                    class="search-input" 
+                    placeholder={t('search.placeholder') || 'Search by title or description...'} 
+                    value={searchQuery}
+                />
+                <button type="submit" class="search-btn">{t('search.button') || 'Search'}</button>
+            </form>
+        </div>
     </div>
 
-    {latestProperties?.length > 0 && (
-        <section class="section">
-            <div class="section-header">
-                <div>
-                    <h2>{t('home.latest_title') || 'Featured Selection'}</h2>
-                    <p style="color: #71717a; margin-top: 0.5rem;">{t('home.latest_subtitle') || 'Our most recent hand-picked real estate opportunities.'}</p>
-                </div>
-                <a href={`/${lang}/properties`} style="font-weight: 700; color: #000; font-size: 0.9375rem; border-bottom: 2px solid #e4e4e7; padding-bottom: 2px;">
-                    {t('home.view_all') || 'View All'} &rarr;
-                </a>
-            </div>
-
+    <main class="results-section container">
+        {properties?.length > 0 ? (
             <div class="property-grid">
-                {latestProperties.map(p => (
+                {properties.map(p => (
                     <a href={`/${lang}/properties/${p.id}`} class="property-card">
                         <div class="property-image">
                             {p.main_image ? (
@@ -313,7 +323,7 @@ const { results: latestProperties } = await db.prepare(`
                             <div class="property-info">
                                 <div class="info-item">
                                     <span class="icon">🛏️</span>
-                                    <span>{p.bedrooms || 0} {t('listing.bedrooms') || 'Beds'}</span>
+                                    <span>{p.bedrooms || 0} {t('listing.bedrooms')}</span>
                                 </div>
                                 <div class="info-item">
                                     <span class="icon">📐</span>
@@ -324,7 +334,12 @@ const { results: latestProperties } = await db.prepare(`
                     </a>
                 ))}
             </div>
-        </section>
-    )}
+        ) : (
+            <div class="empty-state">
+                <p>{t('search.no_results') || 'No properties found matching your criteria.'}</p>
+                <a href={`/${lang}/properties`} style="color: #000; font-weight: 600; text-decoration: underline;">{t('search.clear_filters') || 'Clear all filters'}</a>
+            </div>
+        )}
+    </main>
   </body>
 </html>

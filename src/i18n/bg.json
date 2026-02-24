@@ -64,5 +64,9 @@
     "home.latest_title": "Избрани предложения",
     "home.latest_subtitle": "Нашите най-нови, ръчно подбрани предложения за имоти.",
     "home.view_all": "Виж всички",
-    "listing.bedrooms": "Спални"
+    "listing.bedrooms": "Спални",
+    "search.placeholder": "Търсене по заглавие или описание...",
+    "search.button": "Търси",
+    "search.no_results": "Не са намерени имоти, отговарящи на вашите критерии.",
+    "search.clear_filters": "Изчисти филтрите"
 }
