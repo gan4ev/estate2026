@@ -1,5 +1,14 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../../lib/i18n.js';
+
+const db = Astro.locals.runtime.env.DB;
+const dict = await getDictionary(db, 'en') || {};
+
+const categories = Object.entries(dict).filter(([k]) => k.startsWith('category.')).map(([k, v]) => ({ value: k.replace('category.', ''), label: v }));
+const types = Object.entries(dict).filter(([k]) => k.startsWith('type.')).map(([k, v]) => ({ value: k.replace('type.', ''), label: v }));
+const stages = Object.entries(dict).filter(([k]) => k.startsWith('stage.')).map(([k, v]) => ({ value: k.replace('stage.', ''), label: v }));
+const extras = Object.entries(dict).filter(([k]) => k.startsWith('extra.')).map(([k, v]) => ({ value: k.replace('extra.', ''), label: v }));
 ---
 
 <AdminLayout title="Create New Listing">
@@ -20,20 +29,17 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         <div class="form-group">
           <label for="main_category">Main Category *</label>
           <select id="main_category" name="main_category" required>
-            <option value="for_sale">For Sale (category.for_sale)</option>
-            <option value="for_rent">For Rent (category.for_rent)</option>
+            {categories.map(c => (
+              <option value={c.value}>{c.label}</option>
+            ))}
           </select>
         </div>
         <div class="form-group">
           <label for="property_type">Property Type *</label>
           <select id="property_type" name="property_type" required>
-            <option value="apartment">Apartment (type.apartment)</option>
-            <option value="house">House (type.house)</option>
-            <option value="penthouse">Penthouse (type.penthouse)</option>
-            <option value="lodge">Lodge (type.lodge)</option>
-            <option value="new_development">New Development (type.new_development)</option>
-            <option value="resales">Resales (type.resales)</option>
-            <option value="project">Project (type.project)</option>
+            {types.map(t => (
+              <option value={t.value}>{t.label}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -43,9 +49,9 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <label for="stage">Construction Stage</label>
           <select id="stage" name="stage">
             <option value="">-- Select Stage --</option>
-            <option value="resales">Resales (stage.resales)</option>
-            <option value="new_development">New Development (stage.new_development)</option>
-            <option value="off_plan">Off Plan (stage.off_plan)</option>
+            {stages.map(s => (
+              <option value={s.value}>{s.label}</option>
+            ))}
           </select>
         </div>
         <div class="form-group">
@@ -72,11 +78,13 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       <div class="form-group" style="margin-top: 1rem;">
           <label>Property Extras & Amenities</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; background: #fafafa; padding: 1rem; border: 1px solid #e4e4e7; border-radius: 6px;">
-              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;"><input type="checkbox" name="extras" value="furniture" /> Furniture</label>
-              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;"><input type="checkbox" name="extras" value="kitchen" /> Kitchen</label>
-              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;"><input type="checkbox" name="extras" value="refrigerator" /> Refrigerator</label>
+              {extras.map(e => (
+                <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
+                  <input type="checkbox" name="extras" value={e.value} /> {e.label}
+                </label>
+              ))}
           </div>
-          <small style="color: #71717a; display: block; margin-top: 0.5rem;">These will dynamically translate to 'extra.[key]' on the frontend.</small>
+          <small style="color: #71717a; display: block; margin-top: 0.5rem;">These are pulled from your Site Translations dictionary.</small>
       </div>
 
       <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">

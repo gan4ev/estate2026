@@ -1,8 +1,15 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../../lib/i18n.js';
 
 const { id } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
+const dict = await getDictionary(db, 'en') || {};
+
+const categories = Object.entries(dict).filter(([k]) => k.startsWith('category.')).map(([k, v]) => ({ value: k.replace('category.', ''), label: v }));
+const types = Object.entries(dict).filter(([k]) => k.startsWith('type.')).map(([k, v]) => ({ value: k.replace('type.', ''), label: v }));
+const stages = Object.entries(dict).filter(([k]) => k.startsWith('stage.')).map(([k, v]) => ({ value: k.replace('stage.', ''), label: v }));
+const extras = Object.entries(dict).filter(([k]) => k.startsWith('extra.')).map(([k, v]) => ({ value: k.replace('extra.', ''), label: v }));
 
 // Fetch existing listing data
 const { results } = await db.prepare(`
@@ -53,20 +60,17 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
         <div class="form-group">
           <label for="main_category">Main Category *</label>
           <select id="main_category" name="main_category" required>
-            <option value="for_sale" selected={listing.main_category === 'for_sale'}>For Sale</option>
-            <option value="for_rent" selected={listing.main_category === 'for_rent'}>For Rent</option>
+            {categories.map(c => (
+              <option value={c.value} selected={listing.main_category === c.value}>{c.label}</option>
+            ))}
           </select>
         </div>
         <div class="form-group">
           <label for="property_type">Property Type *</label>
           <select id="property_type" name="property_type" required>
-            <option value="apartment" selected={listing.property_type === 'apartment'}>Apartment</option>
-            <option value="house" selected={listing.property_type === 'house'}>House</option>
-            <option value="penthouse" selected={listing.property_type === 'penthouse'}>Penthouse</option>
-            <option value="lodge" selected={listing.property_type === 'lodge'}>Lodge</option>
-            <option value="new_development" selected={listing.property_type === 'new_development'}>New Development</option>
-            <option value="resales" selected={listing.property_type === 'resales'}>Resales</option>
-            <option value="project" selected={listing.property_type === 'project'}>Project</option>
+            {types.map(t => (
+              <option value={t.value} selected={listing.property_type === t.value}>{t.label}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -76,9 +80,9 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
           <label for="stage">Construction Stage</label>
           <select id="stage" name="stage">
             <option value="">-- Select Stage --</option>
-            <option value="resales" selected={listing.stage === 'resales'}>Resales</option>
-            <option value="new_development" selected={listing.stage === 'new_development'}>New Development</option>
-            <option value="off_plan" selected={listing.stage === 'off_plan'}>Off Plan</option>
+            {stages.map(s => (
+              <option value={s.value} selected={listing.stage === s.value}>{s.label}</option>
+            ))}
           </select>
         </div>
         <div class="form-group">
@@ -114,16 +118,13 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
       <div class="form-group" style="margin-top: 1rem;">
           <label>Property Extras & Amenities</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; background: #fafafa; padding: 1rem; border: 1px solid #e4e4e7; border-radius: 6px;">
-              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" name="extras" value="furniture" checked={activeExtras.includes('furniture')} /> Furniture
-              </label>
-              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" name="extras" value="kitchen" checked={activeExtras.includes('kitchen')} /> Kitchen
-              </label>
-              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" name="extras" value="refrigerator" checked={activeExtras.includes('refrigerator')} /> Refrigerator
-              </label>
+              {extras.map(e => (
+                <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
+                  <input type="checkbox" name="extras" value={e.value} checked={activeExtras.includes(e.value)} /> {e.label}
+                </label>
+              ))}
           </div>
+          <small style="color: #71717a; display: block; margin-top: 0.5rem;">These are pulled from your Site Translations dictionary.</small>
       </div>
 
       <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
