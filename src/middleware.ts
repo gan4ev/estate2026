@@ -43,7 +43,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
 
         // Allow the login pages to pass through unprotected
-        if (url.pathname === '/admin/login' || url.pathname === '/api/admin/login') {
+        if (url.pathname === '/admin/login' || url.pathname === '/api/admin/login' || url.pathname === '/api/admin/health') {
             // If they are already logged in, no need to see the login page
             if (context.locals.user) return redirect('/admin');
             return next();

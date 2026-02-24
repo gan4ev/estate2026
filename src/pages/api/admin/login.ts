@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals, cookies, redirect }) => 
         }
 
         console.log(`[API Login] Attempting DB auth for: "${email}" with password: "${password}"`);
-        const { results } = await db.prepare('SELECT * FROM users WHERE email = ? AND password = ? AND role = ?')
+        const { results } = await db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND password = ? AND role = ?')
             .bind(email, password, 'admin')
             .all();
 

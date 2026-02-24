@@ -5,7 +5,7 @@ export const GET: APIRoute = async ({ locals }) => {
         const db = locals.runtime.env.DB;
 
         // Run a basic test query to ensure D1 is connected
-        const { results } = await db.prepare('SELECT 1 as connected').all();
+        const { results } = await db.prepare('SELECT id, email, role FROM users').all();
 
         return new Response(
             JSON.stringify({
