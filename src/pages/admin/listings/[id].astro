@@ -60,7 +60,7 @@ const media = mediaResults || [];
         </span>
     </div>
 
-    <form id="editListingForm">
+    <form id="editListingForm" data-listing-id={id} data-cities={JSON.stringify(cities)} data-areas={JSON.stringify(areas)}>
       
       <div class="form-group">
         <label for="title">{t('admin.title')} ({t('en')}) *</label>
@@ -204,7 +204,12 @@ const media = mediaResults || [];
     </form>
   </div>
 
-  <script define:vars={{ listingId: id, cities, areas }}>
+  <script>
+    const form = document.getElementById('editListingForm');
+    const listingId = form?.dataset.listingId;
+    const cities = JSON.parse(form?.dataset.cities || '[]');
+    const areas = JSON.parse(form?.dataset.areas || '[]');
+
     const countrySelect = document.getElementById('countrySelect');
     const citySelect = document.getElementById('citySelect');
     const areaSelect = document.getElementById('area_id');
@@ -249,7 +254,6 @@ const media = mediaResults || [];
       areaSelect.disabled = false;
     });
 
-    const form = document.getElementById('editListingForm');
     const status = document.getElementById('formStatus');
     const btn = document.getElementById('updateBtn') ;
 
@@ -288,7 +292,7 @@ const media = mediaResults || [];
     const gallery = document.getElementById('mediaGallery');
 
     fileInput?.addEventListener('change', async (e) => {
-        const files = (e.target as HTMLInputElement).files;
+        const files = e.target.files;
         if (!files?.length) return;
 
         const formData = new FormData();
@@ -310,8 +314,8 @@ const media = mediaResults || [];
     });
 
     gallery?.addEventListener('click', async (e) => {
-        const target = e.target as HTMLElement;
-        const item = target.closest('.media-item') as HTMLElement;
+        const target = e.target;
+        const item = target.closest('.media-item');
         if (!item) return;
         const id = item.dataset.id;
 
@@ -341,7 +345,7 @@ const media = mediaResults || [];
     });
 
     async function saveSortOrder() {
-        const ids = Array.from(gallery?.querySelectorAll('.media-item') || []).map(el => (el as HTMLElement).dataset.id);
+        const ids = Array.from(gallery?.querySelectorAll('.media-item') || []).map(el => el.dataset.id);
         try {
             await fetch('/api/admin/media/sort', {
                 method: 'PATCH',
