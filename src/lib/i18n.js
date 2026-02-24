@@ -1,15 +1,25 @@
-const dicts = import.meta.glob('../i18n/*.json', { eager: true });
-
-export function t(lang, key) {
-    const langPath = `../i18n/${lang}.json`;
-    const enPath = `../i18n/en.json`;
-
-    const dictionary = dicts[langPath]?.default || dicts[enPath]?.default || {};
-    const fallback = dicts[enPath]?.default || {};
-
-    return dictionary[key] || fallback[key] || key;
+export async function getDictionary(db, lang) {
+    if (!db) return null;
+    try {
+        const { results } = await db.prepare('SELECT dictionary FROM site_translations WHERE lang = ?').bind(lang).all();
+        if (results && results.length > 0) {
+            return JSON.parse(results[0].dictionary);
+        }
+    } catch (e) {
+        console.error("I18n DB Error:", e);
+    }
+    return null;
 }
 
-export function getAvailableLanguages() {
-    return Object.keys(dicts).map(path => path.match(/([a-zA-Z-]+)\.json$/)[1]);
+export async function getAvailableLanguages(db) {
+    if (!db) return ['en', 'bg']; // Safe fallback if DB is missing during build
+    try {
+        const { results } = await db.prepare('SELECT lang FROM site_translations').all();
+        if (results && results.length > 0) {
+            return results.map(row => row.lang);
+        }
+    } catch (e) {
+        console.error("I18n DB Error:", e);
+    }
+    return ['en', 'bg'];
 }

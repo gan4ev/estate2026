@@ -51,3 +51,11 @@ CREATE TABLE IF NOT EXISTS media (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );
+
+-- Site Translations for flexible Frontend UI dictionaries
+CREATE TABLE IF NOT EXISTS site_translations (
+    lang TEXT PRIMARY KEY,       -- e.g., 'en', 'bg', 'pl'
+    dictionary TEXT NOT NULL,    -- JSON string of key-value pairs
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

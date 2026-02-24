@@ -1,8 +1,13 @@
 ---
-import { t, getAvailableLanguages } from '../../lib/i18n.js';
+import { getDictionary, getAvailableLanguages } from '../../lib/i18n.js';
 
+const db = Astro.locals.runtime?.env?.DB;
 const { lang } = Astro.params;
-const langs = getAvailableLanguages();
+const langs = await getAvailableLanguages(db);
+
+const dict = await getDictionary(db, lang) || {};
+const fallbackDict = await getDictionary(db, 'en') || {};
+const t = (key) => dict[key] || fallbackDict[key] || key;
 
 const user = Astro.locals.user;
 ---
@@ -12,7 +17,7 @@ const user = Astro.locals.user;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{t(lang, 'title')}</title>
+    <title>{t('title')}</title>
     <style>
       body {
         margin: 0;
@@ -81,10 +86,10 @@ const user = Astro.locals.user;
   </head>
   <body>
     <header>
-      <a href={`/${lang}`} class="logo">{t(lang, 'title')}</a>
+      <a href={`/${lang}`} class="logo">{t('title')}</a>
       <nav>
-        <a href={`/${lang}`}>{t(lang, 'nav.home')}</a>
-        <a href={`/${lang}/contact`}>{t(lang, 'nav.contact')}</a>
+        <a href={`/${lang}`}>{t('nav.home')}</a>
+        <a href={`/${lang}/contact`}>{t('nav.contact')}</a>
         <span class="lang-switcher">
           {langs.map(l => (
             <a href={`/${l}`} data-active={l === lang ? 'true' : 'false'}>
@@ -106,8 +111,8 @@ const user = Astro.locals.user;
     </header>
 
     <main>
-      <h1>{t(lang, 'hero.headline')}</h1>
-      <a href={`/${lang}/properties`} class="cta">{t(lang, 'hero.cta')}</a>
+      <h1>{t('hero.headline')}</h1>
+      <a href={`/${lang}/properties`} class="cta">{t('hero.cta')}</a>
     </main>
   </body>
 </html>
