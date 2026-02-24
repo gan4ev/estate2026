@@ -26,9 +26,16 @@ CREATE TABLE IF NOT EXISTS listings (
     bedrooms INTEGER,
     bathrooms INTEGER,
     area_sqm REAL,
+    main_category TEXT DEFAULT 'for_sale', -- 'for_sale', 'for_rent'
+    property_type TEXT,                    -- 'apartment', 'house', 'penthouse', etc
+    stage TEXT,                            -- 'resales', 'new_development', 'off_plan'
+    featured BOOLEAN DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Indexes for rapid hierarchical filtering and counting at the edge
+CREATE INDEX IF NOT EXISTS idx_listings_search ON listings(status, main_category, property_type, stage);
 
 -- Translations for Listings (i18n)
 CREATE TABLE IF NOT EXISTS listing_i18n (
@@ -58,4 +65,12 @@ CREATE TABLE IF NOT EXISTS site_translations (
     dictionary TEXT NOT NULL,    -- JSON string of key-value pairs
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- M2M Mapping table for dynamic Amenities & Extras (kitchen, furniture, etc)
+CREATE TABLE IF NOT EXISTS listing_extras (
+    listing_id TEXT NOT NULL,
+    extra_key TEXT NOT NULL, -- The dictionary key 'extra.furniture'
+    PRIMARY KEY (listing_id, extra_key),
+    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );

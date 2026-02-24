@@ -18,17 +18,39 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
         <div class="form-group">
-          <label for="type">Property Type</label>
-          <select id="type" name="type">
-            <option value="apartment">Apartment</option>
-            <option value="house">House</option>
-            <option value="commercial">Commercial</option>
-            <option value="land">Land</option>
+          <label for="main_category">Main Category *</label>
+          <select id="main_category" name="main_category" required>
+            <option value="for_sale">For Sale (category.for_sale)</option>
+            <option value="for_rent">For Rent (category.for_rent)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="property_type">Property Type *</label>
+          <select id="property_type" name="property_type" required>
+            <option value="apartment">Apartment (type.apartment)</option>
+            <option value="house">House (type.house)</option>
+            <option value="penthouse">Penthouse (type.penthouse)</option>
+            <option value="lodge">Lodge (type.lodge)</option>
+            <option value="new_development">New Development (type.new_development)</option>
+            <option value="resales">Resales (type.resales)</option>
+            <option value="project">Project (type.project)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label for="stage">Construction Stage</label>
+          <select id="stage" name="stage">
+            <option value="">-- Select Stage --</option>
+            <option value="resales">Resales (stage.resales)</option>
+            <option value="new_development">New Development (stage.new_development)</option>
+            <option value="off_plan">Off Plan (stage.off_plan)</option>
           </select>
         </div>
         <div class="form-group">
           <label for="price">Price (€) *</label>
-          <input type="number" id="price" name="price" required min="0" step="1000" />
+          <input type="number" id="price" name="price" required min="0" step="1" />
         </div>
       </div>
 
@@ -45,6 +67,16 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <label for="area_sqm">Area (m²)</label>
           <input type="number" id="area_sqm" name="area_sqm" min="0" value="0" />
         </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 1rem;">
+          <label>Property Extras & Amenities</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; background: #fafafa; padding: 1rem; border: 1px solid #e4e4e7; border-radius: 6px;">
+              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;"><input type="checkbox" name="extras" value="furniture" /> Furniture</label>
+              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;"><input type="checkbox" name="extras" value="kitchen" /> Kitchen</label>
+              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;"><input type="checkbox" name="extras" value="refrigerator" /> Refrigerator</label>
+          </div>
+          <small style="color: #71717a; display: block; margin-top: 0.5rem;">These will dynamically translate to 'extra.[key]' on the frontend.</small>
       </div>
 
       <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
