@@ -20,7 +20,7 @@ const { results: areas } = await db.prepare(`SELECT a.id, a.city_id, (SELECT nam
 
 <AdminLayout title={t('admin.create_listing')}>
   <div class="card" style="max-width: 600px;">
-    <form id="listingForm">
+    <form id="listingForm" data-cities={JSON.stringify(cities)} data-areas={JSON.stringify(areas)}>
       
       <div class="form-group">
         <label for="title">{t('admin.title')} ({t('en')}) *</label>
@@ -123,7 +123,11 @@ const { results: areas } = await db.prepare(`SELECT a.id, a.city_id, (SELECT nam
     </form>
   </div>
 
-  <script define:vars={{ cities, areas }}>
+  <script>
+    const form = document.getElementById('listingForm');
+    const cities = JSON.parse(form?.dataset.cities || '[]');
+    const areas = JSON.parse(form?.dataset.areas || '[]');
+
     const countrySelect = document.getElementById('countrySelect');
     const citySelect = document.getElementById('citySelect');
     const areaSelect = document.getElementById('area_id');
@@ -168,9 +172,8 @@ const { results: areas } = await db.prepare(`SELECT a.id, a.city_id, (SELECT nam
       areaSelect.disabled = false;
     });
 
-    const form = document.getElementById('listingForm') as HTMLFormElement;
     const status = document.getElementById('formStatus');
-    const btn = document.getElementById('submitBtn') as HTMLButtonElement;
+    const btn = document.getElementById('submitBtn');
 
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -178,7 +181,7 @@ const { results: areas } = await db.prepare(`SELECT a.id, a.city_id, (SELECT nam
       if(status) { status.style.display = 'inline'; status.textContent = 'Saving...'; status.style.color = '#71717a'; }
       if(btn) btn.disabled = true;
 
-      const formData = new FormData(form);
+      const formData = new FormData(form as HTMLFormElement);
 
       try {
         const response = await fetch('/api/admin/listings', {
@@ -196,7 +199,7 @@ const { results: areas } = await db.prepare(`SELECT a.id, a.city_id, (SELECT nam
         } else {
           throw new Error(result.error || 'Failed to save listing');
         }
-      } catch (err: any) {
+      } catch (err) {
         if(status) { status.style.color = '#dc2626'; status.textContent = err.message; }
         if(btn) btn.disabled = false;
       }
