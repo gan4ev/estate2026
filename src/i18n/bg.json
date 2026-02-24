@@ -56,5 +56,7 @@
     "admin.add_area": "Добави район",
     "admin.country_code": "Код на държава (ISO)",
     "admin.name_en": "Име (Английски)",
-    "admin.name_bg": "Име (Български)"
+    "admin.name_bg": "Име (Български)",
+    "admin.media": "Медия и Галерия",
+    "admin.add_images": "Добави Снимки"
 }

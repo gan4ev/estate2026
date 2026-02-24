@@ -36,7 +36,24 @@ CREATE TABLE IF NOT EXISTS listings (
     FOREIGN KEY (area_id) REFERENCES areas(id) ON DELETE SET NULL
 );
 
--- ... (Media and Listing Extras tables continue)
+-- Media / Photos Table
+CREATE TABLE IF NOT EXISTS media (
+    id TEXT PRIMARY KEY,
+    listing_id TEXT NOT NULL,
+    r2_key TEXT NOT NULL,
+    is_primary BOOLEAN DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+);
+
+-- Listing Extras / Amenities (M2M)
+CREATE TABLE IF NOT EXISTS listing_extras (
+    listing_id TEXT NOT NULL,
+    extra_key TEXT NOT NULL,
+    PRIMARY KEY (listing_id, extra_key),
+    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+);
 
 -- Countries
 CREATE TABLE IF NOT EXISTS countries (

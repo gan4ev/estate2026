@@ -1,6 +1,6 @@
 ---
-import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getDictionary } from '../../../lib/i18n.js';
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../../../lib/i18n.js';
 
 const db = Astro.locals.runtime?.env?.DB;
 const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';

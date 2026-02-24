@@ -9,7 +9,9 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
         const { results } = await db.prepare(`
             SELECT l.*, i.title, i.description,
-            (SELECT json_group_array(extra_key) FROM listing_extras WHERE listing_id = l.id) AS extras
+            (SELECT json_group_array(extra_key) FROM listing_extras WHERE listing_id = l.id) AS extras,
+            (SELECT json_group_array(json_object('id', id, 'r2_key', r2_key, 'is_primary', is_primary, 'sort_order', sort_order)) 
+             FROM (SELECT * FROM media WHERE listing_id = l.id ORDER BY sort_order ASC)) AS media
             FROM listings l
             LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = 'en'
             WHERE l.id = ?

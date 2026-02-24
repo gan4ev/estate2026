@@ -56,5 +56,7 @@
     "admin.add_area": "Add Area",
     "admin.country_code": "Country Code (ISO)",
     "admin.name_en": "Name (English)",
-    "admin.name_bg": "Name (Bulgarian)"
+    "admin.name_bg": "Name (Bulgarian)",
+    "admin.media": "Media & Gallery",
+    "admin.add_images": "Add Images"
 }
