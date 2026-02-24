@@ -1,0 +1,15 @@
+name = "estate2026"
+compatibility_date = "2024-04-05"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "estate2026-db"
+database_id = "765a3df9-29ae-49de-b4d5-bfc4f2f745ca"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "estate2026-media"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "3606d494b6ae41f08510c8c8bff4c272"
