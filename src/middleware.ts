@@ -23,7 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
             console.log("[Auth] DB runtime status:", !!db);
 
             if (db) {
-                const { results } = await db.prepare('SELECT * FROM users WHERE email = ? AND role = ?')
+                const { results } = await db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND role = ?')
                     .bind(emailToVerify, 'admin')
                     .all();
 
