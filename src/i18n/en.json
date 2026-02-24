@@ -68,5 +68,9 @@
     "search.placeholder": "Search by title or description...",
     "search.button": "Search",
     "search.no_results": "No properties found matching your criteria.",
-    "search.clear_filters": "Clear all filters"
+    "search.clear_filters": "Clear all filters",
+    "property.description": "Description",
+    "property.amenities": "Amenities & Features",
+    "property.quick_info": "Quick Info",
+    "property.contact_agent": "Contact Agent"
 }

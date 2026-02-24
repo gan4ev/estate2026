@@ -68,5 +68,9 @@
     "search.placeholder": "Търсене по заглавие или описание...",
     "search.button": "Търси",
     "search.no_results": "Не са намерени имоти, отговарящи на вашите критерии.",
-    "search.clear_filters": "Изчисти филтрите"
+    "search.clear_filters": "Изчисти филтрите",
+    "property.description": "Описание",
+    "property.amenities": "Удобства и характеристики",
+    "property.quick_info": "Бърза информация",
+    "property.contact_agent": "Свържи се с агент"
 }
