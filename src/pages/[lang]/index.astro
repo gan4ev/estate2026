@@ -3,6 +3,8 @@ import { t, getAvailableLanguages } from '../../lib/i18n.js';
 
 const { lang } = Astro.params;
 const langs = getAvailableLanguages();
+
+const user = Astro.locals.user;
 ---
 
 <!DOCTYPE html>
@@ -90,6 +92,9 @@ const langs = getAvailableLanguages();
             </a>
           ))}
         </span>
+        {user && (
+          <a href="/admin" style="margin-left: 1rem; padding: 0.25rem 0.5rem; background: #18181b; color: white; border-radius: 4px; font-size: 0.875rem;">Admin Panel</a>
+        )}
       </nav>
     </header>
 
