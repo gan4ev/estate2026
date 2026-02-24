@@ -92,8 +92,15 @@ const user = Astro.locals.user;
             </a>
           ))}
         </span>
-        {user && (
-          <a href="/admin" style="margin-left: 1rem; padding: 0.25rem 0.5rem; background: #18181b; color: white; border-radius: 4px; font-size: 0.875rem;">Admin Panel</a>
+        {user ? (
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: 1rem;">
+             <a href="/admin" style="padding: 0.25rem 0.5rem; background: #18181b; color: white; border-radius: 4px; font-size: 0.875rem;">Admin Panel</a>
+             <form method="POST" action="/api/admin/logout" style="margin: 0;">
+                <button type="submit" style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 0.875rem; padding: 0.25rem 0.5rem;">Logout</button>
+             </form>
+          </div>
+        ) : (
+          <a href="/admin/login" style="margin-left: 1rem; padding: 0.25rem 0.5rem; border: 1px solid #18181b; color: #18181b; border-radius: 4px; font-size: 0.875rem;">Sign In</a>
         )}
       </nav>
     </header>
