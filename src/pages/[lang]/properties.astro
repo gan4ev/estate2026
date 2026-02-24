@@ -5,7 +5,16 @@ import { getDictionary, getAvailableLanguages } from '../../lib/i18n.js';
 const db = Astro.locals.runtime?.env?.DB;
 const { lang } = Astro.params;
 const url = new URL(Astro.request.url);
-const searchQuery = url.searchParams.get('q') || '';
+
+// Read all filter params from URL
+const searchQuery  = url.searchParams.get('q') || '';
+const priceMin     = url.searchParams.get('price_min') || '';
+const priceMax     = url.searchParams.get('price_max') || '';
+const bedroomsMin  = url.searchParams.get('beds') || '';
+const propType     = url.searchParams.get('type') || '';
+const category     = url.searchParams.get('category') || '';
+const areaFilter   = url.searchParams.get('area') || '';
+const countryFilter = url.searchParams.get('country') || '';
 
 const langs = await getAvailableLanguages(db);
 const dict = await getDictionary(db, lang) || {};
@@ -14,15 +23,27 @@ const t = (key) => dict[key] || fallbackDict[key] || key;
 
 const user = Astro.locals.user;
 
-// Fetch filtered properties
+// Fetch countries & areas for filter dropdowns
+const { results: countries } = await db.prepare(`
+    SELECT c.id, li.name FROM countries c
+    JOIN location_i18n li ON c.id = li.entity_id AND li.lang = ? AND li.entity_type = 'country'
+    ORDER BY li.name
+`).bind(lang).all();
+
+const { results: areas } = await db.prepare(`
+    SELECT a.id, a.city_id, li.name, 
+           (SELECT li2.name FROM location_i18n li2 WHERE li2.entity_id = ci.country_id AND li2.lang = ? AND li2.entity_type = 'country') as country_name
+    FROM areas a
+    JOIN cities ci ON a.city_id = ci.id
+    JOIN location_i18n li ON a.id = li.entity_id AND li.lang = ? AND li.entity_type = 'area'
+    ORDER BY country_name, li.name
+`).bind(lang, lang).all();
+
+// Build dynamic query
 let query = `
     SELECT 
-        l.id, 
-        l.price, 
-        l.bedrooms, 
-        l.area_sqm,
-        i.title, 
-        i.slug as property_slug,
+        l.id, l.price, l.bedrooms, l.area_sqm, l.type, l.main_category,
+        i.title, i.slug as property_slug,
         (SELECT r2_key FROM media WHERE listing_id = l.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as main_image,
         (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name,
         (SELECT slug FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_slug,
@@ -35,14 +56,27 @@ let query = `
 
 const params = [lang, lang, lang, lang, lang];
 
-if (searchQuery) {
-    query += ` AND (i.title LIKE ? OR i.description LIKE ?)`;
-    params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+if (searchQuery)  { query += ` AND (i.title LIKE ? OR i.description LIKE ?)`; params.push(`%${searchQuery}%`, `%${searchQuery}%`); }
+if (priceMin)     { query += ` AND l.price >= ?`; params.push(Number(priceMin)); }
+if (priceMax)     { query += ` AND l.price <= ?`; params.push(Number(priceMax)); }
+if (bedroomsMin)  { query += ` AND l.bedrooms >= ?`; params.push(Number(bedroomsMin)); }
+if (propType)     { query += ` AND l.type = ?`; params.push(propType); }
+if (category)     { query += ` AND l.main_category = ?`; params.push(category); }
+if (areaFilter)   { query += ` AND l.area_id = ?`; params.push(areaFilter); }
+if (countryFilter) {
+    query += ` AND l.area_id IN (
+        SELECT a.id FROM areas a 
+        JOIN cities ci ON a.city_id = ci.id 
+        WHERE ci.country_id = ?
+    )`;
+    params.push(countryFilter);
 }
 
 query += ` ORDER BY l.created_at DESC`;
 
 const { results: properties } = await db.prepare(query).bind(...params).all();
+
+const hasFilters = searchQuery || priceMin || priceMax || bedroomsMin || propType || category || areaFilter || countryFilter;
 ---
 
 <!DOCTYPE html>
@@ -51,213 +85,151 @@ const { results: properties } = await db.prepare(query).bind(...params).all();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{t('nav.properties')} - {t('title')}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
     <style>
+      *, *::before, *::after { box-sizing: border-box; }
       body {
         margin: 0;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: 'Inter', system-ui, sans-serif;
         color: #18181b;
-        background: #fafafa;
+        background: #f4f4f5;
+        min-height: 100vh;
       }
+      a { text-decoration: none; color: inherit; }
+
+      /* NAV */
       header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem 2rem;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 1rem 2rem; background: #fff;
+        border-bottom: 1px solid #e4e4e7; position: sticky; top: 0; z-index: 100;
+      }
+      .logo { font-weight: 900; font-size: 1.4rem; letter-spacing: -0.04em; }
+      nav { display: flex; gap: 1.5rem; align-items: center; }
+      nav a { color: #71717a; font-weight: 500; font-size: 0.9rem; transition: color 0.15s; }
+      nav a:hover { color: #000; }
+      .lang-switcher { display: flex; gap: 0.5rem; margin-left: 1rem; padding-left: 1rem; border-left: 1px solid #e4e4e7; }
+      .lang-switcher a { font-size: 0.7rem; font-weight: 700; color: #a1a1aa; }
+      .lang-switcher a[data-active="true"] { color: #000; }
+
+      /* LAYOUT */
+      .page-layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 0;
+        max-width: 1400px;
+        margin: 0 auto;
+        min-height: calc(100vh - 57px);
+      }
+
+      /* SIDEBAR */
+      .filter-sidebar {
         background: #fff;
-        border-bottom: 1px solid #eaeaea;
+        border-right: 1px solid #e4e4e7;
+        padding: 2rem 1.5rem;
         position: sticky;
-        top: 0;
-        z-index: 50;
+        top: 57px;
+        height: calc(100vh - 57px);
+        overflow-y: auto;
       }
-      a {
-        text-decoration: none;
-        color: inherit;
-        transition: color 0.2s;
+      .sidebar-title {
+        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+        text-transform: uppercase; color: #a1a1aa; margin: 0 0 1.5rem;
       }
-      .logo {
-        font-weight: 800;
-        font-size: 1.5rem;
-        letter-spacing: -0.025em;
-        color: #000;
+      .filter-group { margin-bottom: 2rem; }
+      .filter-label {
+        display: block; font-size: 0.8rem; font-weight: 600;
+        color: #3f3f46; margin-bottom: 0.6rem;
       }
-      nav {
-        display: flex;
-        gap: 1.5rem;
-        align-items: center;
+      .filter-input, .filter-select {
+        width: 100%; padding: 0.6rem 0.9rem;
+        border: 1.5px solid #e4e4e7; border-radius: 10px;
+        font-size: 0.9rem; font-family: inherit; color: #18181b;
+        background: #fafafa; outline: none; transition: border-color 0.15s;
       }
-      nav a {
-        color: #71717a;
-        font-weight: 500;
-        font-size: 0.9375rem;
-      }
-      nav a:hover {
-        color: #000;
-      }
-      .lang-switcher {
-        display: flex;
-        gap: 0.75rem;
-        margin-left: 1rem;
-        padding-left: 1rem;
-        border-left: 1px solid #e4e4e7;
-      }
-      .lang-switcher a {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #a1a1aa;
-      }
-      .lang-switcher a[data-active="true"] {
-        color: #000;
-      }
+      .filter-input:focus, .filter-select:focus { border-color: #18181b; background: #fff; }
+      .price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+      .price-row .filter-input { padding: 0.6rem 0.6rem; }
 
-      .search-section {
-          background: #fff;
-          border-bottom: 1px solid #e4e4e7;
-          padding: 3rem 2rem;
+      /* Bed buttons */
+      .bed-buttons { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+      .bed-btn {
+        padding: 0.4rem 0.8rem; border: 1.5px solid #e4e4e7; border-radius: 8px;
+        font-size: 0.8rem; font-weight: 600; cursor: pointer;
+        background: #fafafa; color: #71717a; transition: all 0.15s;
       }
+      .bed-btn:hover { border-color: #18181b; color: #18181b; }
+      .bed-btn.active { background: #18181b; color: #fff; border-color: #18181b; }
 
-      .container {
-          max-width: 1200px;
-          margin: 0 auto;
+      /* Category toggle */
+      .cat-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+      .cat-btn {
+        padding: 0.5rem 0.5rem; border: 1.5px solid #e4e4e7; border-radius: 8px;
+        font-size: 0.8rem; font-weight: 600; cursor: pointer; text-align: center;
+        background: #fafafa; color: #71717a; transition: all 0.15s;
       }
+      .cat-btn:hover { border-color: #18181b; color: #18181b; }
+      .cat-btn.active { background: #18181b; color: #fff; border-color: #18181b; }
 
-      .search-form {
-          display: flex;
-          gap: 1rem;
-          max-width: 800px;
-          margin: 0 auto;
+      .apply-btn {
+        width: 100%; padding: 0.75rem; background: #18181b; color: #fff;
+        border: none; border-radius: 12px; font-size: 0.9rem; font-weight: 700;
+        cursor: pointer; transition: opacity 0.15s; margin-top: 0.5rem;
       }
+      .apply-btn:hover { opacity: 0.85; }
+      .clear-link {
+        display: block; text-align: center; margin-top: 0.75rem;
+        font-size: 0.8rem; color: #71717a; text-decoration: underline; cursor: pointer;
+      }
+      .clear-link:hover { color: #dc2626; }
 
-      .search-input {
-          flex: 1;
-          padding: 0.75rem 1.5rem;
-          border: 1px solid #e4e4e7;
-          border-radius: 99px;
-          font-size: 1rem;
-          outline: none;
-          transition: border-color 0.2s;
+      /* RESULTS */
+      .results-area { padding: 2rem; }
+      .results-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 1.5rem;
       }
-
-      .search-input:focus {
-          border-color: #000;
-      }
-
-      .search-btn {
-          padding: 0.75rem 2rem;
-          background: #18181b;
-          color: #fff;
-          border: none;
-          border-radius: 99px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s;
-      }
-
-      .search-btn:hover {
-          background: #000;
-      }
-
-      .results-section {
-          padding: 4rem 2rem;
-      }
+      .results-count { font-size: 0.9rem; color: #71717a; font-weight: 500; }
+      .results-count strong { color: #18181b; }
 
       .property-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 2rem;
-          margin-top: 2rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
       }
-
       .property-card {
-          background: #fff;
-          border-radius: 16px;
-          overflow: hidden;
-          border: 1px solid #e4e4e7;
-          transition: transform 0.3s, box-shadow 0.3s;
-          display: flex;
-          flex-direction: column;
+        background: #fff; border-radius: 16px; overflow: hidden;
+        border: 1px solid #e4e4e7; transition: transform 0.25s, box-shadow 0.25s;
+        display: flex; flex-direction: column;
       }
-
-      .property-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-      }
-
-      .property-image {
-          position: relative;
-          aspect-ratio: 16/10;
-          background: #f4f4f5;
-      }
-
-      .property-image img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-      }
-
+      .property-card:hover { transform: translateY(-4px); box-shadow: 0 16px 30px -8px rgba(0,0,0,0.12); }
+      .property-image { position: relative; aspect-ratio: 16/10; background: #f4f4f5; }
+      .property-image img { width: 100%; height: 100%; object-fit: cover; }
       .property-price {
-          position: absolute;
-          bottom: 1rem;
-          left: 1rem;
-          background: #fff;
-          padding: 0.5rem 1rem;
-          border-radius: 8px;
-          font-weight: 800;
-          font-size: 1.25rem;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        position: absolute; bottom: 0.75rem; left: 0.75rem;
+        background: rgba(255,255,255,0.95); backdrop-filter: blur(8px);
+        padding: 0.35rem 0.85rem; border-radius: 8px;
+        font-weight: 800; font-size: 1.1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
       }
-
-      .property-content {
-          padding: 1.5rem;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
+      .property-badge {
+        position: absolute; top: 0.75rem; right: 0.75rem;
+        padding: 0.2rem 0.65rem; border-radius: 6px; font-size: 0.7rem;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+        background: #18181b; color: #fff;
       }
+      .property-content { padding: 1.25rem 1.25rem 1.5rem; flex: 1; display: flex; flex-direction: column; }
+      .property-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .property-area { color: #71717a; font-size: 0.825rem; margin-bottom: 1rem; }
+      .property-info { display: flex; gap: 1.25rem; padding-top: 1rem; border-top: 1px solid #f4f4f5; margin-top: auto; }
+      .info-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.825rem; color: #52525b; font-weight: 500; }
 
-      .property-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          margin: 0 0 0.5rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-      }
+      .empty-state { text-align: center; padding: 5rem 2rem; color: #a1a1aa; }
+      .empty-state h3 { font-size: 1.5rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.5rem; }
 
-      .property-area {
-          color: #71717a;
-          font-size: 0.875rem;
-          margin-bottom: 1.5rem;
-      }
-
-      .property-info {
-          display: flex;
-          gap: 1.5rem;
-          padding-top: 1.25rem;
-          border-top: 1px solid #f4f4f5;
-          margin-top: auto;
-      }
-
-      .info-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.875rem;
-          color: #3f3f46;
-          font-weight: 500;
-      }
-
-      .info-item .icon {
-          color: #a1a1aa;
-      }
-
-      .empty-state {
-          text-align: center;
-          padding: 4rem;
-          color: #71717a;
-      }
-
-      @media (max-width: 640px) {
-          .search-form { flex-direction: column; }
-          .property-grid { grid-template-columns: 1fr; }
+      @media (max-width: 900px) {
+        .page-layout { grid-template-columns: 1fr; }
+        .filter-sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid #e4e4e7; }
       }
     </style>
   </head>
@@ -270,89 +242,162 @@ const { results: properties } = await db.prepare(query).bind(...params).all();
         <a href={`/${lang}/contact`}>{t('nav.contact')}</a>
         <span class="lang-switcher">
           {langs.map(l => (
-            <a href={`/${l}/properties`} data-active={l === lang ? 'true' : 'false'}>
-              {l.toUpperCase()}
-            </a>
+            <a href={`/${l}/properties`} data-active={l === lang ? 'true' : 'false'}>{l.toUpperCase()}</a>
           ))}
         </span>
         {user ? (
           <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: 1rem;">
-             <a href="/admin" style="padding: 0.4rem 0.8rem; background: #18181b; color: white; border-radius: 8px; font-size: 0.875rem; font-weight: 600;">{t('admin.dashboard')}</a>
-             <form method="POST" action="/api/admin/logout" style="margin: 0;">
-                <button type="submit" style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 0.875rem; padding: 0.25rem 0.5rem; font-weight: 600;">{t('admin.logout')}</button>
-             </form>
+            <a href="/admin" style="padding: 0.4rem 0.8rem; background: #18181b; color: white; border-radius: 8px; font-size: 0.825rem; font-weight: 600;">{t('admin.dashboard')}</a>
           </div>
         ) : (
-          <a href="/admin/login" style="margin-left: 1rem; padding: 0.4rem 0.8rem; border: 1px solid #e4e4e7; color: #18181b; border-radius: 8px; font-size: 0.875rem; font-weight: 600;">{t('admin.sign_in')}</a>
+          <a href="/admin/login" style="margin-left: 1rem; padding: 0.4rem 0.8rem; border: 1px solid #e4e4e7; color: #18181b; border-radius: 8px; font-size: 0.825rem; font-weight: 600;">{t('admin.sign_in')}</a>
         )}
       </nav>
     </header>
 
-    <div class="search-section">
-        <div class="container">
-            <h1 style="text-align: center; margin-bottom: 2rem; font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em;">{t('nav.properties')}</h1>
-            <form action={`/${lang}/properties`} class="search-form">
-                <input 
-                    type="text" 
-                    name="q" 
-                    class="search-input" 
-                    placeholder={t('search.placeholder') || 'Search by title or description...'} 
-                    value={searchQuery}
-                />
-                <button type="submit" class="search-btn">{t('search.button') || 'Search'}</button>
-            </form>
-        </div>
-    </div>
+    <div class="page-layout">
+      <!-- FILTER SIDEBAR -->
+      <aside class="filter-sidebar">
+        <p class="sidebar-title">🔍 Search &amp; Filter</p>
 
-    <main class="results-section container">
+        <form id="filterForm" action={`/${lang}/properties`} method="get">
+
+          <!-- Keyword -->
+          <div class="filter-group">
+            <label class="filter-label">Keyword</label>
+            <input type="text" name="q" class="filter-input" placeholder="Title, description..." value={searchQuery} />
+          </div>
+
+          <!-- Price Range -->
+          <div class="filter-group">
+            <label class="filter-label">Price Range (€)</label>
+            <div class="price-row">
+              <input type="number" name="price_min" class="filter-input" placeholder="Min" value={priceMin} min="0" step="1000" />
+              <input type="number" name="price_max" class="filter-input" placeholder="Max" value={priceMax} min="0" step="1000" />
+            </div>
+          </div>
+
+          <!-- Bedrooms -->
+          <div class="filter-group">
+            <label class="filter-label">Bedrooms</label>
+            <div class="bed-buttons">
+              {['', '1', '2', '3', '4'].map(n => (
+                <button type="button" class={`bed-btn${bedroomsMin === n ? ' active' : ''}`} data-beds={n}
+                  onclick={`document.getElementById('bedsInput').value='${n}'; document.querySelectorAll('.bed-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');`}>
+                  {n === '' ? 'Any' : `${n}+`}
+                </button>
+              ))}
+            </div>
+            <input type="hidden" name="beds" id="bedsInput" value={bedroomsMin} />
+          </div>
+
+          <!-- Category -->
+          <div class="filter-group">
+            <label class="filter-label">Category</label>
+            <div class="cat-buttons">
+              {[['', 'Any'], ['for_sale', '🏷️ For Sale'], ['for_rent', '🔑 For Rent']].map(([val, label]) => (
+                <button type="button" class={`cat-btn${category === val ? ' active' : ''}`}
+                  onclick={`document.getElementById('categoryInput').value='${val}'; document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <input type="hidden" name="category" id="categoryInput" value={category} />
+          </div>
+
+          <!-- Property Type -->
+          <div class="filter-group">
+            <label class="filter-label">Property Type</label>
+            <select name="type" class="filter-select">
+              <option value="">Any Type</option>
+              <option value="apartment"   selected={propType === 'apartment'}  >Apartment</option>
+              <option value="house"       selected={propType === 'house'}      >House</option>
+              <option value="penthouse"   selected={propType === 'penthouse'}  >Penthouse</option>
+              <option value="lodge"       selected={propType === 'lodge'}      >Lodge</option>
+              <option value="new_development" selected={propType === 'new_development'}>New Development</option>
+            </select>
+          </div>
+
+          <!-- Country -->
+          <div class="filter-group">
+            <label class="filter-label">Country</label>
+            <select name="country" class="filter-select" id="countrySelect">
+              <option value="">Any Country</option>
+              {countries.map((c: any) => (
+                <option value={c.id} selected={countryFilter === c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <!-- Area -->
+          <div class="filter-group">
+            <label class="filter-label">Area / Neighborhood</label>
+            <select name="area" class="filter-select" id="areaSelect">
+              <option value="">Any Area</option>
+              {areas.map((a: any) => (
+                <option value={a.id} selected={areaFilter === a.id}>{a.country_name} → {a.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <button type="submit" class="apply-btn">Apply Filters</button>
+          <a href={`/${lang}/properties`} class="clear-link">Clear all filters</a>
+        </form>
+      </aside>
+
+      <!-- RESULTS -->
+      <div class="results-area">
+        <div class="results-header">
+          <p class="results-count">
+            <strong>{properties?.length || 0}</strong> {properties?.length === 1 ? 'property' : 'properties'} found
+            {hasFilters ? ' (filtered)' : ''}
+          </p>
+        </div>
+
         {properties?.length > 0 ? (
-            <div class="property-grid">
-                {properties.map(p => {
-                    const countrySlug = p.country_slug || 'all';
-                    const citySlug = p.city_slug || 'all';
-                    const areaSlug = p.area_slug || 'all';
-                    const propertySlug = p.property_slug || p.id;
-                    const propertyUrl = `/${lang}/properties/${countrySlug}/${citySlug}/${areaSlug}/${propertySlug}`;
-                    
-                    return (
-                        <a href={propertyUrl} class="property-card">
-                            <div class="property-image">
-                                {p.main_image ? (
-                                    <img src={`/api/media/${p.main_image}?w=600`} alt={p.title} loading="lazy" decoding="async" />
-                                ) : (
-                                    <div style="width: 100%; height: 100%; background: #f4f4f5; display: flex; align-items: center; justify-content: center; color: #a1a1aa;">No image</div>
-                                )}
-                                <div class="property-price">
-                                    {new Intl.NumberFormat(lang === 'bg' ? 'bg-BG' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(p.price)}
-                                </div>
-                            </div>
-                            <div class="property-content">
-                                <h3 class="property-title">{p.title || 'Property Listing'}</h3>
-                                <div class="property-area">
-                                    📍 {p.area_name || 'Premium Location'}
-                                </div>
-                                
-                                <div class="property-info">
-                                    <div class="info-item">
-                                        <span class="icon">🛏️</span>
-                                        <span>{p.bedrooms || 0} {t('listing.bedrooms')}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="icon">📐</span>
-                                        <span>{p.area_sqm || 0} m²</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </a>
-                    );
-                })}
-            </div>
+          <div class="property-grid">
+            {properties.map(p => {
+              const countrySlug = p.country_slug || 'all';
+              const citySlug = p.city_slug || 'all';
+              const areaSlug = p.area_slug || 'all';
+              const propertySlug = p.property_slug || p.id;
+              const propertyUrl = `/${lang}/properties/${countrySlug}/${citySlug}/${areaSlug}/${propertySlug}`;
+
+              return (
+                <a href={propertyUrl} class="property-card">
+                  <div class="property-image">
+                    {p.main_image ? (
+                      <img src={`/api/media/${p.main_image}?w=600`} alt={p.title} loading="lazy" decoding="async" />
+                    ) : (
+                      <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#a1a1aa;font-size:0.85rem;">No image</div>
+                    )}
+                    <div class="property-price">
+                      {new Intl.NumberFormat(lang === 'bg' ? 'bg-BG' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(p.price)}
+                    </div>
+                    {p.type && <div class="property-badge">{p.type.replace('_', ' ')}</div>}
+                  </div>
+                  <div class="property-content">
+                    <h3 class="property-title">{p.title || 'Property Listing'}</h3>
+                    <div class="property-area">📍 {p.area_name || 'Premium Location'}</div>
+                    <div class="property-info">
+                      <div class="info-item"><span>🛏️</span><span>{p.bedrooms || 0} {t('listing.bedrooms')}</span></div>
+                      <div class="info-item"><span>📐</span><span>{p.area_sqm || 0} m²</span></div>
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
         ) : (
-            <div class="empty-state">
-                <p>{t('search.no_results') || 'No properties found matching your criteria.'}</p>
-                <a href={`/${lang}/properties`} style="color: #000; font-weight: 600; text-decoration: underline;">{t('search.clear_filters') || 'Clear all filters'}</a>
-            </div>
+          <div class="empty-state">
+            <h3>No properties found</h3>
+            <p>{t('search.no_results')}</p>
+            <a href={`/${lang}/properties`} style="color: #18181b; font-weight: 700; text-decoration: underline; margin-top: 1rem; display: inline-block;">
+              {t('search.clear_filters')}
+            </a>
+          </div>
         )}
-    </main>
+      </div>
+    </div>
   </body>
 </html>

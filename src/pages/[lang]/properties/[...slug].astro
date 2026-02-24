@@ -30,7 +30,7 @@ const query = `
         (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name,
         (SELECT slug FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_slug,
         (SELECT ci.id FROM areas a JOIN cities ci ON a.city_id = ci.id WHERE a.id = l.area_id) as city_id,
-        (SELECT r2_key FROM media WHERE listing_id = l.id AND is_primary = 1 LIMIT 1) as main_image
+        (SELECT r2_key FROM media WHERE listing_id = l.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as main_image
     FROM listings l
     JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
     WHERE i.slug = ? AND l.status = 'published'
