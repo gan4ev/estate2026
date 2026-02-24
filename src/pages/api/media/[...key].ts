@@ -1,3 +1,4 @@
+export const prerender = false;
 import type { APIRoute } from 'astro';
 
 // Public R2 URL - used as fallback when local R2 binding has no data (dev mode)
