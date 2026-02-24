@@ -1,0 +1,173 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+const { id } = Astro.params;
+const db = Astro.locals.runtime.env.DB;
+
+// Fetch existing listing data
+const { results } = await db.prepare(`
+    SELECT l.*, i.title, i.description
+    FROM listings l
+    LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = 'en'
+    WHERE l.id = ?
+`).bind(id).all();
+
+if (!results || results.length === 0) {
+    return Astro.redirect('/admin/listings');
+}
+
+const listing = results[0];
+
+// Fetch existing extras
+const { results: extrasResults } = await db.prepare(`
+    SELECT extra_key FROM listing_extras WHERE listing_id = ?
+`).bind(id).all();
+const activeExtras = extrasResults.map((r: any) => r.extra_key);
+---
+
+<AdminLayout title="Edit Listing">
+  <div class="card" style="max-width: 600px;">
+    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: start;">
+        <div>
+            <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">&larr; Back to Listings</a>
+            <h2 style="margin: 0.5rem 0 0 0;">Editing Properties</h2>
+        </div>
+        <span style="background: #e4e4e7; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; text-transform: uppercase;">
+            ID: {id?.slice(0,8)}...
+        </span>
+    </div>
+
+    <form id="editListingForm">
+      
+      <div class="form-group">
+        <label for="title">Title (English) *</label>
+        <input type="text" id="title" name="title" required value={listing.title} />
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description *</label>
+        <textarea id="description" name="description" required>{listing.description}</textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label for="main_category">Main Category *</label>
+          <select id="main_category" name="main_category" required>
+            <option value="for_sale" selected={listing.main_category === 'for_sale'}>For Sale</option>
+            <option value="for_rent" selected={listing.main_category === 'for_rent'}>For Rent</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="property_type">Property Type *</label>
+          <select id="property_type" name="property_type" required>
+            <option value="apartment" selected={listing.property_type === 'apartment'}>Apartment</option>
+            <option value="house" selected={listing.property_type === 'house'}>House</option>
+            <option value="penthouse" selected={listing.property_type === 'penthouse'}>Penthouse</option>
+            <option value="lodge" selected={listing.property_type === 'lodge'}>Lodge</option>
+            <option value="new_development" selected={listing.property_type === 'new_development'}>New Development</option>
+            <option value="resales" selected={listing.property_type === 'resales'}>Resales</option>
+            <option value="project" selected={listing.property_type === 'project'}>Project</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label for="stage">Construction Stage</label>
+          <select id="stage" name="stage">
+            <option value="">-- Select Stage --</option>
+            <option value="resales" selected={listing.stage === 'resales'}>Resales</option>
+            <option value="new_development" selected={listing.stage === 'new_development'}>New Development</option>
+            <option value="off_plan" selected={listing.stage === 'off_plan'}>Off Plan</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="price">Price (€) *</label>
+          <input type="number" id="price" name="price" required min="0" step="1" value={listing.price} />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label for="bedrooms">Bedrooms</label>
+          <input type="number" id="bedrooms" name="bedrooms" min="0" value={listing.bedrooms} />
+        </div>
+        <div class="form-group">
+          <label for="bathrooms">Bathrooms</label>
+          <input type="number" id="bathrooms" name="bathrooms" min="0" value={listing.bathrooms} />
+        </div>
+        <div class="form-group">
+          <label for="area_sqm">Area (m²)</label>
+          <input type="number" id="area_sqm" name="area_sqm" min="0" value={listing.area_sqm} />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="status">Publishing Status</label>
+        <select id="status" name="status">
+          <option value="draft" selected={listing.status === 'draft'}>Draft</option>
+          <option value="published" selected={listing.status === 'published'}>Published</option>
+          <option value="archived" selected={listing.status === 'archived'}>Archived</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-top: 1rem;">
+          <label>Property Extras & Amenities</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; background: #fafafa; padding: 1rem; border: 1px solid #e4e4e7; border-radius: 6px;">
+              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="extras" value="furniture" checked={activeExtras.includes('furniture')} /> Furniture
+              </label>
+              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="extras" value="kitchen" checked={activeExtras.includes('kitchen')} /> Kitchen
+              </label>
+              <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="extras" value="refrigerator" checked={activeExtras.includes('refrigerator')} /> Refrigerator
+              </label>
+          </div>
+      </div>
+
+      <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
+        <button type="submit" class="btn" id="updateBtn">Update Listing</button>
+        <a href="/admin/listings" style="color: #71717a; text-decoration: none; font-size: 0.875rem;">Cancel</a>
+        <span id="formStatus" style="font-size: 0.875rem; color: #16a34a; display: none;">Updating...</span>
+      </div>
+
+    </form>
+  </div>
+
+  <script define:vars={{ listingId: id }}>
+    const form = document.getElementById('editListingForm');
+    const status = document.getElementById('formStatus');
+    const btn = document.getElementById('updateBtn') ;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if(status) { status.style.display = 'inline'; status.textContent = 'Updating...'; status.style.color = '#71717a'; }
+      if(btn) btn.disabled = true;
+
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch(`/api/admin/listings/${listingId}`, {
+          method: 'PUT',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          if(status) { status.style.color = '#16a34a'; status.textContent = 'Updated successfully!'; }
+          setTimeout(() => {
+            window.location.href = '/admin/listings';
+          }, 1000);
+        } else {
+          throw new Error(result.error || 'Failed to update listing');
+        }
+      } catch (err) {
+        if(status) { status.style.color = '#dc2626'; status.textContent = err.message; }
+        if(btn) btn.disabled = false;
+      }
+    });
+  </script>
+</AdminLayout>
