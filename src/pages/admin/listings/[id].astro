@@ -13,11 +13,14 @@ const types = Object.entries(dict).filter(([k]) => k.startsWith('type.')).map(([
 const stages = Object.entries(dict).filter(([k]) => k.startsWith('stage.')).map(([k, v]) => ({ value: k.replace('stage.', ''), label: v }));
 const extras = Object.entries(dict).filter(([k]) => k.startsWith('extra.')).map(([k, v]) => ({ value: k.replace('extra.', ''), label: v }));
 
-// Fetch existing listing data
+// Fetch existing listing data with location hierarchy
 const { results } = await db.prepare(`
-    SELECT l.*, i.title, i.description
+    SELECT l.*, i.title, i.description,
+           a.city_id, ci.country_id
     FROM listings l
     LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = 'en'
+    LEFT JOIN areas a ON l.area_id = a.id
+    LEFT JOIN cities ci ON a.city_id = ci.id
     WHERE l.id = ?
 `).bind(id).all();
 
@@ -26,6 +29,11 @@ if (!results || results.length === 0) {
 }
 
 const listing = results[0];
+
+// Fetch hierarchical location data for dropdowns
+const { results: countries } = await db.prepare(`SELECT c.id, (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = ? AND entity_type = 'country') as name FROM countries c`).bind(adminLang).all();
+const { results: cities } = await db.prepare(`SELECT c.id, c.country_id, (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = ? AND entity_type = 'city') as name FROM cities c`).bind(adminLang).all();
+const { results: areas } = await db.prepare(`SELECT a.id, a.city_id, (SELECT name FROM location_i18n WHERE entity_id = a.id AND lang = ? AND entity_type = 'area') as name FROM areas a`).bind(adminLang).all();
 
 // Fetch existing extras
 const { results: extrasResults } = await db.prepare(`
@@ -56,6 +64,34 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
       <div class="form-group">
         <label for="description">{t('admin.description')} *</label>
         <textarea id="description" name="description" required>{listing.description}</textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
+        <div class="form-group">
+          <label>{t('admin.countries')} *</label>
+          <select id="countrySelect">
+            <option value="">Select Country</option>
+            {countries.map(c => <option value={c.id} selected={c.id === listing.country_id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{t('admin.cities')} *</label>
+          <select id="citySelect" disabled={!listing.city_id}>
+            <option value="">Select City</option>
+            {cities.filter(ci => ci.country_id === listing.country_id).map(ci => (
+              <option value={ci.id} selected={ci.id === listing.city_id}>{ci.name}</option>
+            ))}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{t('admin.areas')} *</label>
+          <select id="area_id" name="area_id" required disabled={!listing.area_id}>
+            <option value="">Select Area</option>
+            {areas.filter(a => a.city_id === listing.city_id).map(a => (
+              <option value={a.id} selected={a.id === listing.area_id}>{a.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -137,7 +173,51 @@ const activeExtras = extrasResults.map((r: any) => r.extra_key);
     </form>
   </div>
 
-  <script define:vars={{ listingId: id }}>
+  <script define:vars={{ listingId: id, cities, areas }}>
+    const countrySelect = document.getElementById('countrySelect');
+    const citySelect = document.getElementById('citySelect');
+    const areaSelect = document.getElementById('area_id');
+
+    countrySelect?.addEventListener('change', (e) => {
+      const countryId = e.target.value;
+      citySelect.innerHTML = '<option value="">Select City</option>';
+      areaSelect.innerHTML = '<option value="">Select Area</option>';
+      areaSelect.disabled = true;
+      
+      if (!countryId) {
+        citySelect.disabled = true;
+        return;
+      }
+
+      const filteredCities = cities.filter(c => c.country_id === countryId);
+      filteredCities.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        citySelect.appendChild(opt);
+      });
+      citySelect.disabled = false;
+    });
+
+    citySelect?.addEventListener('change', (e) => {
+      const cityId = e.target.value;
+      areaSelect.innerHTML = '<option value="">Select Area</option>';
+      
+      if (!cityId) {
+        areaSelect.disabled = true;
+        return;
+      }
+
+      const filteredAreas = areas.filter(a => a.city_id === cityId);
+      filteredAreas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.name;
+        areaSelect.appendChild(opt);
+      });
+      areaSelect.disabled = false;
+    });
+
     const form = document.getElementById('editListingForm');
     const status = document.getElementById('formStatus');
     const btn = document.getElementById('updateBtn') ;

@@ -1,0 +1,124 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../../lib/i18n.js';
+
+const db = Astro.locals.runtime?.env?.DB;
+const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, adminLang) || {};
+const t = (key: string) => dict[key] || key;
+
+// Server-side fetch for cities
+const { results: cities } = await db.prepare(`
+    SELECT c.*, 
+    (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'en' AND entity_type = 'city') as name_en,
+    (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'city') as name_bg,
+    (SELECT name FROM location_i18n WHERE entity_id = c.country_id AND lang = ? AND entity_type = 'country') as country_name
+    FROM cities c
+    ORDER BY created_at DESC
+`).bind(adminLang).all();
+
+// Fetch countries for the dropdown
+const { results: countries } = await db.prepare(`
+    SELECT c.id, 
+    (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = ? AND entity_type = 'country') as name
+    FROM countries c
+`).bind(adminLang).all();
+---
+
+<AdminLayout title={t('admin.cities')}>
+  <div style="display: flex; justify-content: space-between; align-items: start; gap: 2rem;">
+    
+    <!-- City List -->
+    <div class="card" style="flex: 1; padding: 0;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead>
+          <tr style="border-bottom: 1px solid #e4e4e7; background: #f8f8f8;">
+            <th style="padding: 1rem;">{t('admin.countries')}</th>
+            <th style="padding: 1rem;">{t('admin.name_en')}</th>
+            <th style="padding: 1rem;">{t('admin.name_bg')}</th>
+            <th style="padding: 1rem;">{t('admin.actions')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cities.map((c: any) => (
+            <tr style="border-bottom: 1px solid #e4e4e7;">
+              <td style="padding: 1rem;">{c.country_name}</td>
+              <td style="padding: 1rem;">{c.name_en}</td>
+              <td style="padding: 1rem;">{c.name_bg}</td>
+              <td style="padding: 1rem;">
+                 -
+              </td>
+            </tr>
+          ))}
+          {cities.length === 0 && (
+            <tr>
+              <td colspan="4" style="padding: 2rem; text-align: center; color: #71717a;">No cities added yet.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Add City Form -->
+    <div class="card" style="width: 300px;">
+      <h3 style="margin-top: 0;">{t('admin.add_city')}</h3>
+      <form id="addCityForm">
+        <div class="form-group">
+          <label for="country_id">{t('admin.countries')} *</label>
+          <select id="country_id" name="country_id" required>
+            <option value="">Select Country</option>
+            {countries.map(co => (
+              <option value={co.id}>{co.name}</option>
+            ))}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="name_en">{t('admin.name_en')} *</label>
+          <input type="text" id="name_en" name="name_en" required placeholder="Sofia" />
+        </div>
+        <div class="form-group">
+          <label for="name_bg">{t('admin.name_bg')} *</label>
+          <input type="text" id="name_bg" name="name_bg" placeholder="София" />
+        </div>
+        <button type="submit" class="btn" id="submitBtn" style="width: 100%;">{t('admin.save')}</button>
+        <p id="formStatus" style="font-size: 0.875rem; margin-top: 1rem; display: none;"></p>
+      </form>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('addCityForm');
+    const status = document.getElementById('formStatus');
+    const btn = document.getElementById('submitBtn');
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.style.display = 'block';
+      status.textContent = 'Saving...';
+      status.style.color = '#71717a';
+      btn.disabled = true;
+
+      const formData = new FormData(form);
+      try {
+        const response = await fetch('/api/admin/locations/cities', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          status.style.color = '#16a34a';
+          status.textContent = 'City added!';
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to add city');
+        }
+      } catch (err) {
+        status.style.color = '#dc2626';
+        status.textContent = err.message;
+        btn.disabled = false;
+      }
+    });
+  </script>
+</AdminLayout>

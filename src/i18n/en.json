@@ -45,5 +45,16 @@
     "admin.delete": "Delete",
     "admin.confirm_delete": "Are you sure you want to delete this property listing? This action cannot be undone.",
     "admin.sign_in": "Sign In",
-    "admin.logout": "Logout"
+    "admin.logout": "Logout",
+    "admin.locations": "Locations",
+    "admin.manage_locations": "Manage Locations",
+    "admin.countries": "Countries",
+    "admin.cities": "Cities",
+    "admin.areas": "Areas",
+    "admin.add_country": "Add Country",
+    "admin.add_city": "Add City",
+    "admin.add_area": "Add Area",
+    "admin.country_code": "Country Code (ISO)",
+    "admin.name_en": "Name (English)",
+    "admin.name_bg": "Name (Bulgarian)"
 }

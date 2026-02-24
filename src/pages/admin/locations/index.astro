@@ -1,0 +1,33 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../lib/i18n.js';
+
+const db = Astro.locals.runtime?.env?.DB;
+const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, adminLang) || {};
+const t = (key: string) => dict[key] || key;
+---
+
+<AdminLayout title={t('admin.manage_locations')}>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem;">
+    
+    <div class="card">
+      <h3 style="margin-top: 0;">{t('admin.countries')}</h3>
+      <p style="color: #71717a; font-size: 0.875rem;">Manage the list of countries (e.g., Bulgaria, Spain).</p>
+      <a href="/admin/locations/countries" class="btn" style="display: inline-block; margin-top: 1rem;">{t('admin.manage_locations')}</a>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0;">{t('admin.cities')}</h3>
+      <p style="color: #71717a; font-size: 0.875rem;">Add cities and link them to countries (e.g., Burgas, Sofia).</p>
+      <a href="/admin/locations/cities" class="btn" style="display: inline-block; margin-top: 1rem;">{t('admin.manage_locations')}</a>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0;">{t('admin.areas')}</h3>
+      <p style="color: #71717a; font-size: 0.875rem;">Specify neighborhoods or sub-areas (e.g., Izgrev, Sea Garden).</p>
+      <a href="/admin/locations/areas" class="btn" style="display: inline-block; margin-top: 1rem;">{t('admin.manage_locations')}</a>
+    </div>
+
+  </div>
+</AdminLayout>

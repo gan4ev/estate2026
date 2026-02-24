@@ -29,40 +29,44 @@ CREATE TABLE IF NOT EXISTS listings (
     main_category TEXT DEFAULT 'for_sale', -- 'for_sale', 'for_rent'
     property_type TEXT,                    -- 'apartment', 'house', 'penthouse', etc
     stage TEXT,                            -- 'resales', 'new_development', 'off_plan'
+    area_id TEXT,                          -- Hierarchical location reference
     featured BOOLEAN DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (area_id) REFERENCES areas(id) ON DELETE SET NULL
 );
 
--- Indexes for rapid hierarchical filtering and counting at the edge
-CREATE INDEX IF NOT EXISTS idx_listings_search ON listings(status, main_category, property_type, stage);
+-- ... (Media and Listing Extras tables continue)
 
--- Translations for Listings (i18n)
-CREATE TABLE IF NOT EXISTS listing_i18n (
+-- Countries
+CREATE TABLE IF NOT EXISTS countries (
     id TEXT PRIMARY KEY,
-    listing_id TEXT NOT NULL,
-    lang TEXT NOT NULL, -- e.g., 'en', 'bg'
-    title TEXT NOT NULL,
-    description TEXT,
-    location TEXT,
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE,
-    UNIQUE(listing_id, lang)
+    code TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Media table (R2 Object Keys)
-CREATE TABLE IF NOT EXISTS media (
+-- Cities
+CREATE TABLE IF NOT EXISTS cities (
     id TEXT PRIMARY KEY,
-    listing_id TEXT NOT NULL,
-    r2_key TEXT NOT NULL, -- the key object stored in the R2 bucket
-    is_primary BOOLEAN DEFAULT 0,
+    country_id TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+    FOREIGN KEY (country_id) REFERENCES countries(id) ON DELETE CASCADE
 );
 
--- M2M Mapping table for dynamic Amenities & Extras (kitchen, furniture, etc)
-CREATE TABLE IF NOT EXISTS listing_extras (
-    listing_id TEXT NOT NULL,
-    extra_key TEXT NOT NULL, -- The dictionary key 'extra.furniture'
-    PRIMARY KEY (listing_id, extra_key),
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+-- Areas
+CREATE TABLE IF NOT EXISTS areas (
+    id TEXT PRIMARY KEY,
+    city_id TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (city_id) REFERENCES cities(id) ON DELETE CASCADE
+);
+
+-- Location Translations
+CREATE TABLE IF NOT EXISTS location_i18n (
+    id TEXT PRIMARY KEY,
+    entity_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL CHECK(entity_type IN ('country', 'city', 'area')),
+    lang TEXT NOT NULL,
+    name TEXT NOT NULL,
+    UNIQUE(entity_id, lang)
 );

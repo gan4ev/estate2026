@@ -45,5 +45,16 @@
     "admin.delete": "Изтрий",
     "admin.confirm_delete": "Сигурни ли сте, че искате да изтриете тази обява? Това действие е необратимо.",
     "admin.sign_in": "Вход",
-    "admin.logout": "Изход"
+    "admin.logout": "Изход",
+    "admin.locations": "Локации",
+    "admin.manage_locations": "Управление на локации",
+    "admin.countries": "Държави",
+    "admin.cities": "Градове",
+    "admin.areas": "Райони",
+    "admin.add_country": "Добави държава",
+    "admin.add_city": "Добави град",
+    "admin.add_area": "Добави район",
+    "admin.country_code": "Код на държава (ISO)",
+    "admin.name_en": "Име (Английски)",
+    "admin.name_bg": "Име (Български)"
 }

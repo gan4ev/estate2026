@@ -1,0 +1,112 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDictionary } from '../../../lib/i18n.js';
+
+const db = Astro.locals.runtime?.env?.DB;
+const adminLang = Astro.cookies.get('admin_lang')?.value || 'en';
+const dict = await getDictionary(db, adminLang) || {};
+const t = (key: string) => dict[key] || key;
+
+// Server-side fetch for countries
+const { results: countries } = await db.prepare(`
+    SELECT c.*, 
+    (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'en' AND entity_type = 'country') as name_en,
+    (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = 'bg' AND entity_type = 'country') as name_bg
+    FROM countries c
+    ORDER BY created_at DESC
+`).all();
+---
+
+<AdminLayout title={t('admin.countries')}>
+  <div style="display: flex; justify-content: space-between; align-items: start; gap: 2rem;">
+    
+    <!-- Country List -->
+    <div class="card" style="flex: 1; padding: 0;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead>
+          <tr style="border-bottom: 1px solid #e4e4e7; background: #f8f8f8;">
+            <th style="padding: 1rem;">{t('admin.country_code')}</th>
+            <th style="padding: 1rem;">{t('admin.name_en')}</th>
+            <th style="padding: 1rem;">{t('admin.name_bg')}</th>
+            <th style="padding: 1rem;">{t('admin.actions')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {countries.map((c: any) => (
+            <tr style="border-bottom: 1px solid #e4e4e7;">
+              <td style="padding: 1rem;">{c.code}</td>
+              <td style="padding: 1rem;">{c.name_en}</td>
+              <td style="padding: 1rem;">{c.name_bg}</td>
+              <td style="padding: 1rem;">
+                <!-- Add delete action here if needed -->
+                 -
+              </td>
+            </tr>
+          ))}
+          {countries.length === 0 && (
+            <tr>
+              <td colspan="4" style="padding: 2rem; text-align: center; color: #71717a;">No countries added yet.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Add Country Form -->
+    <div class="card" style="width: 300px;">
+      <h3 style="margin-top: 0;">{t('admin.add_country')}</h3>
+      <form id="addCountryForm">
+        <div class="form-group">
+          <label for="code">{t('admin.country_code')} *</label>
+          <input type="text" id="code" name="code" required maxlength="2" placeholder="BG" />
+        </div>
+        <div class="form-group">
+          <label for="name_en">{t('admin.name_en')} *</label>
+          <input type="text" id="name_en" name="name_en" required placeholder="Bulgaria" />
+        </div>
+        <div class="form-group">
+          <label for="name_bg">{t('admin.name_bg')} *</label>
+          <input type="text" id="name_bg" name="name_bg" placeholder="България" />
+        </div>
+        <button type="submit" class="btn" id="submitBtn" style="width: 100%;">{t('admin.save')}</button>
+        <p id="formStatus" style="font-size: 0.875rem; margin-top: 1rem; display: none;"></p>
+      </form>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    const form = document.getElementById('addCountryForm');
+    const status = document.getElementById('formStatus');
+    const btn = document.getElementById('submitBtn');
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.style.display = 'block';
+      status.textContent = 'Saving...';
+      status.style.color = '#71717a';
+      btn.disabled = true;
+
+      const formData = new FormData(form);
+      try {
+        const response = await fetch('/api/admin/locations/countries', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          status.style.color = '#16a34a';
+          status.textContent = 'Country added!';
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to add country');
+        }
+      } catch (err) {
+        status.style.color = '#dc2626';
+        status.textContent = err.message;
+        btn.disabled = false;
+      }
+    });
+  </script>
+</AdminLayout>

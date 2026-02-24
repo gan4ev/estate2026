@@ -14,6 +14,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const bedrooms = Number(formData.get('bedrooms')) || 0;
         const bathrooms = Number(formData.get('bathrooms')) || 0;
         const area_sqm = Number(formData.get('area_sqm')) || 0;
+        const area_id = formData.get('area_id')?.toString() || null;
         const extras = formData.getAll('extras'); // M2M Array
 
         if (!title) {
@@ -26,9 +27,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // 1. Build the core structural transactions
         const statements = [
             db.prepare(`
-                INSERT INTO listings (id, status, price, main_category, property_type, stage, bedrooms, bathrooms, area_sqm)
-                VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?)
-            `).bind(listingId, price, main_category, property_type, stage, bedrooms, bathrooms, area_sqm),
+                INSERT INTO listings (id, status, price, main_category, property_type, stage, area_id, bedrooms, bathrooms, area_sqm)
+                VALUES (?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(listingId, price, main_category, property_type, stage, area_id, bedrooms, bathrooms, area_sqm),
 
             db.prepare(`
                 INSERT INTO listing_i18n (id, listing_id, lang, title, description)
@@ -69,6 +70,7 @@ export const GET: APIRoute = async ({ locals }) => {
         // Join listings with their English translation and aggregate extras into a JSON array string dynamically
         const { results } = await db.prepare(`
       SELECT l.*, i.title, i.description,
+      (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = 'en' AND entity_type = 'area') AS area_name,
       (SELECT json_group_array(extra_key) FROM listing_extras WHERE listing_id = l.id) AS extras
       FROM listings l
       LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = 'en'

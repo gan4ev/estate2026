@@ -9,11 +9,12 @@ const dict = await getDictionary(db, adminLang) || {};
 const t = (key: string) => dict[key] || key;
 
 const { results: listings } = await db.prepare(`
-  SELECT l.*, i.title 
+  SELECT l.*, i.title,
+  (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name
   FROM listings l
   LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
   ORDER BY l.created_at DESC
-`).bind(adminLang).all();
+`).bind(adminLang, adminLang).all();
 ---
 
 <AdminLayout title={t('admin.manage_properties')}>
@@ -29,6 +30,7 @@ const { results: listings } = await db.prepare(`
           <th style="padding: 1rem;">{t('admin.title')}</th>
           <th style="padding: 1rem;">{t('admin.main_category')}</th>
           <th style="padding: 1rem;">{t('admin.property_type')}</th>
+          <th style="padding: 1rem;">{t('admin.area')}</th>
           <th style="padding: 1rem;">{t('admin.price')}</th>
           <th style="padding: 1rem;">{t('admin.status')}</th>
           <th style="padding: 1rem;">{t('admin.actions')}</th>
@@ -47,6 +49,7 @@ const { results: listings } = await db.prepare(`
               <td style="padding: 1rem; font-weight: 500;">{l.title || 'Untitled'}</td>
               <td style="padding: 1rem; text-transform: capitalize;">{dict[`category.${l.main_category}`] || l.main_category?.replace('_', ' ')}</td>
               <td style="padding: 1rem; text-transform: capitalize;">{dict[`type.${l.property_type}`] || l.property_type}</td>
+              <td style="padding: 1rem;">{l.area_name || <span style="color: #a1a1aa; font-size: 0.8rem;">Not specified</span>}</td>
               <td style="padding: 1rem;">€{l.price?.toLocaleString()}</td>
               <td style="padding: 1rem;">
                 <span style="background: #e4e4e7; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">

@@ -61,6 +61,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
         const bedrooms = Number(formData.get('bedrooms')) || 0;
         const bathrooms = Number(formData.get('bathrooms')) || 0;
         const area_sqm = Number(formData.get('area_sqm')) || 0;
+        const area_id = formData.get('area_id')?.toString() || null;
         const status = formData.get('status')?.toString() || 'draft';
         const extras = formData.getAll('extras');
 
@@ -73,9 +74,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
             db.prepare(`
                 UPDATE listings 
                 SET status = ?, price = ?, main_category = ?, property_type = ?, stage = ?, 
-                    bedrooms = ?, bathrooms = ?, area_sqm = ?, updated_at = CURRENT_TIMESTAMP
+                    area_id = ?, bedrooms = ?, bathrooms = ?, area_sqm = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-            `).bind(status, price, main_category, property_type, stage, bedrooms, bathrooms, area_sqm, id),
+            `).bind(status, price, main_category, property_type, stage, area_id, bedrooms, bathrooms, area_sqm, id),
 
             // Update English translation
             db.prepare(`
