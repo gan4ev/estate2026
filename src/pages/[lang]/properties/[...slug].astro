@@ -194,10 +194,10 @@ const ogImage = property.main_image ? new URL(`/api/media/${property.main_image}
 
     <main class="container">
         <div class="gallery-grid">
-            <img src={property.main_image ? `/api/media/${property.main_image}` : '/placeholder.jpg'} class="main-photo" alt={property.title} />
+            <img src={property.main_image ? `/api/media/${property.main_image}?w=1400` : '/placeholder.jpg'} class="main-photo" alt={property.title} fetchpriority="high" decoding="async" />
             <div class="side-photos">
                 {gallery.slice(1, 3).map(img => (
-                    <img src={`/api/media/${img.r2_key}`} class="side-photo" alt="Gallery item" />
+                    <img src={`/api/media/${img.r2_key}?w=600`} class="side-photo" alt="Gallery item" loading="lazy" decoding="async" />
                 ))}
             </div>
         </div>

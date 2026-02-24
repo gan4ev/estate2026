@@ -318,7 +318,7 @@ const { results: properties } = await db.prepare(query).bind(...params).all();
                         <a href={propertyUrl} class="property-card">
                             <div class="property-image">
                                 {p.main_image ? (
-                                    <img src={`/api/media/${p.main_image}`} alt={p.title} />
+                                    <img src={`/api/media/${p.main_image}?w=600`} alt={p.title} loading="lazy" decoding="async" />
                                 ) : (
                                     <div style="width: 100%; height: 100%; background: #f4f4f5; display: flex; align-items: center; justify-content: center; color: #a1a1aa;">No image</div>
                                 )}

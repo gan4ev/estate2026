@@ -20,9 +20,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const extension = file.name.split('.').pop();
             const r2Key = `listings/${listingId}/${fileId}.${extension}`;
 
-            // Upload to R2
+            // Upload to R2 with long-lived cache headers
             await bucket.put(r2Key, file, {
-                httpMetadata: { contentType: file.type }
+                httpMetadata: {
+                    contentType: file.type,
+                    cacheControl: 'public, max-age=31536000, immutable',
+                }
             });
 
             // Get current max sort order for this listing
