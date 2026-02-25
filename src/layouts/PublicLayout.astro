@@ -1,5 +1,6 @@
 ---
 import { ViewTransitions } from 'astro:transitions';
+import { getDictionary, getAvailableLanguages } from '../lib/i18n.js';
 
 interface Props {
   title: string;
@@ -7,11 +8,23 @@ interface Props {
   image?: string | null;
   lang?: string;
   canonicalUrl?: string;
+  activePage?: string;
 }
 
-const { title, description, image, lang = 'en', canonicalUrl } = Astro.props;
+const { title, description, image, lang = 'en', canonicalUrl, activePage = '' } = Astro.props;
+
+const db = Astro.locals.runtime?.env?.DB;
+const langs = await getAvailableLanguages(db);
+const dict = await getDictionary(db, lang) || {};
+const fallbackDict = await getDictionary(db, 'en') || {};
+const t = (key: string) => dict[key] || fallbackDict[key] || key;
+const user = Astro.locals.user;
 
 const R2_PUBLIC = 'https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev';
+
+// Build the current path without lang prefix for language switching
+const currentPath = Astro.url.pathname;
+const pathWithoutLang = currentPath.replace(/^\/(en|bg)/, '') || '/';
 ---
 
 <!DOCTYPE html>
@@ -20,35 +33,106 @@ const R2_PUBLIC = 'https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Preconnect for R2 image domain -->
     <link rel="preconnect" href={R2_PUBLIC} crossorigin />
     <link rel="dns-prefetch" href={R2_PUBLIC} />
 
-    <!-- Self-hosted Inter font — no render-blocking external request -->
-    <style>
-      @font-face {
-        font-family: 'Inter';
-        src: url('/fonts/inter-400.woff2') format('woff2');
-        font-weight: 400;
-        font-style: normal;
-        font-display: swap;
-      }
-      @font-face {
-        font-family: 'Inter';
-        src: url('/fonts/inter-700.woff2') format('woff2');
-        font-weight: 700;
-        font-style: normal;
-        font-display: swap;
-      }
-      *, *::before, *::after { box-sizing: border-box; }
-      html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-      body { margin: 0; }
-      a { text-decoration: none; color: inherit; }
-    </style>
-
-    <!-- Preload critical font weights -->
     <link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/inter-700.woff2" as="font" type="font/woff2" crossorigin />
+
+    <style>
+      @font-face { font-family: 'Inter'; src: url('/fonts/inter-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+      @font-face { font-family: 'Inter'; src: url('/fonts/inter-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+      *, *::before, *::after { box-sizing: border-box; }
+      html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+      body { margin: 0; color: #18181b; }
+      a { text-decoration: none; color: inherit; transition: color 0.15s; }
+
+      /* Shared Navigation */
+      .site-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        background: #fff;
+        border-bottom: 1px solid #e4e4e7;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .site-logo {
+        font-weight: 900;
+        font-size: 1.4rem;
+        letter-spacing: -0.04em;
+        color: #000;
+      }
+      .site-nav {
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+      }
+      .site-nav a {
+        color: #71717a;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+      .site-nav a:hover { color: #000; }
+      .site-nav a.active { color: #000; font-weight: 700; }
+      .nav-lang-switcher {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: 1rem;
+        padding-left: 1rem;
+        border-left: 1px solid #e4e4e7;
+      }
+      .nav-lang-switcher a {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #a1a1aa;
+        padding: 0.25rem 0.4rem;
+        border-radius: 4px;
+        transition: all 0.15s;
+      }
+      .nav-lang-switcher a[data-active="true"] {
+        color: #000;
+        background: #f4f4f5;
+      }
+      .nav-lang-switcher a:hover { color: #000; }
+      .nav-admin-btn {
+        padding: 0.4rem 0.8rem;
+        background: #18181b;
+        color: white !important;
+        border-radius: 8px;
+        font-size: 0.825rem;
+        font-weight: 600;
+      }
+      .nav-admin-btn:hover { background: #000; }
+      .nav-signin-btn {
+        padding: 0.4rem 0.8rem;
+        border: 1px solid #e4e4e7;
+        color: #18181b !important;
+        border-radius: 8px;
+        font-size: 0.825rem;
+        font-weight: 600;
+      }
+      .nav-signin-btn:hover { border-color: #18181b; }
+      .nav-logout-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #dc2626;
+        font-size: 0.825rem;
+        padding: 0.25rem 0.5rem;
+        font-weight: 600;
+        font-family: inherit;
+      }
+      .nav-logout-btn:hover { color: #b91c1c; }
+
+      @media (max-width: 768px) {
+        .site-header { padding: 0.75rem 1rem; }
+        .site-nav { gap: 0.75rem; }
+        .site-nav a { font-size: 0.8rem; }
+      }
+    </style>
 
     <!-- SEO -->
     <title>{title}</title>
@@ -64,13 +148,40 @@ const R2_PUBLIC = 'https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev';
     <meta property="og:type" content="website" />
     {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
 
-    <!-- Astro View Transitions — SPA-like navigation, no full reloads -->
     <ViewTransitions />
 
-    <!-- Slot for page-specific head content -->
     <slot name="head" />
   </head>
   <body>
+    <!-- Shared Navigation Bar -->
+    <header class="site-header">
+      <a href={`/${lang}`} class="site-logo">{t('title')}</a>
+      <nav class="site-nav">
+        <a href={`/${lang}`} class={activePage === 'home' ? 'active' : ''}>{t('nav.home')}</a>
+        <a href={`/${lang}/properties`} class={activePage === 'properties' ? 'active' : ''}>{t('nav.properties') || 'Properties'}</a>
+        <a href={`/${lang}/contact`} class={activePage === 'contact' ? 'active' : ''}>{t('nav.contact')}</a>
+
+        <span class="nav-lang-switcher">
+          {langs.map(l => (
+            <a href={`/${l}${pathWithoutLang}`} data-active={l === lang ? 'true' : 'false'}>
+              {l.toUpperCase()}
+            </a>
+          ))}
+        </span>
+
+        {user ? (
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: 0.5rem;">
+            <a href="/admin" class="nav-admin-btn">{t('admin.dashboard')}</a>
+            <form method="POST" action="/api/admin/logout" style="margin: 0;">
+              <button type="submit" class="nav-logout-btn">{t('admin.logout')}</button>
+            </form>
+          </div>
+        ) : (
+          <a href="/admin/login" class="nav-signin-btn" style="margin-left: 0.5rem;">{t('admin.sign_in')}</a>
+        )}
+      </nav>
+    </header>
+
     <slot />
   </body>
 </html>

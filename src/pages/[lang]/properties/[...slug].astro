@@ -1,22 +1,18 @@
 ---
 export const prerender = false;
-import { ViewTransitions } from 'astro:transitions';
-import { getDictionary, getAvailableLanguages } from '../../../lib/i18n.js';
-import SeoTags from '../../../components/SeoTags.astro';
+import PublicLayout from '../../../layouts/PublicLayout.astro';
+import { getDictionary } from '../../../lib/i18n.js';
 
 const db = Astro.locals.runtime?.env?.DB;
 const { lang, slug } = Astro.params;
 
-// Parse hierarchical slug: country/city/area/property-title
-const slugParts = slug?.split('/') || [];
-const propertySlug = slugParts[slugParts.length - 1];
-
-const langs = await getAvailableLanguages(db);
 const dict = await getDictionary(db, lang) || {};
 const fallbackDict = await getDictionary(db, 'en') || {};
 const t = (key) => dict[key] || fallbackDict[key] || key;
 
-const user = Astro.locals.user;
+// Parse hierarchical slug: country/city/area/property-title
+const slugParts = slug?.split('/') || [];
+const propertySlug = slugParts[slugParts.length - 1];
 
 // Fetch property by slug — try current lang first, fall back to English
 const query = `
@@ -56,209 +52,154 @@ const { results: extras } = await db.prepare(`
 `).bind(property.id).all();
 
 const canonicalUrl = new URL(Astro.request.url).href;
-const description = property.meta_description || property.description?.substring(0, 160) || '';
+const seoDescription = property.meta_description || property.description?.substring(0, 160) || '';
 const ogImage = property.main_image ? new URL(`/api/media/${property.main_image}`, Astro.request.url).href : null;
 ---
 
-<!DOCTYPE html>
-<html lang={lang}>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev" crossorigin />
-    <link rel="dns-prefetch" href="https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev" />
-    <link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/inter-700.woff2" as="font" type="font/woff2" crossorigin />
-    <SeoTags 
-        title={property.meta_title || property.title}
-        description={description}
-        image={ogImage}
-        url={canonicalUrl}
-        lang={lang}
-        type="article"
-    />
-    <ViewTransitions />
-    <style>
-      @font-face { font-family: 'Inter'; src: url('/fonts/inter-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-      @font-face { font-family: 'Inter'; src: url('/fonts/inter-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
-      body {
-        margin: 0;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        color: #18181b;
-        background: #fff;
-        line-height: 1.6;
-      }
-      header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem 2rem;
-        background: #fff;
-        border-bottom: 1px solid #eaeaea;
-        position: sticky;
-        top: 0;
-        z-index: 50;
-      }
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 2rem;
-      }
-      .gallery-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 0.5rem;
-          margin: 2rem 0;
-          border-radius: 12px;
-          overflow: hidden;
-          background: #f4f4f5;
-          aspect-ratio: 21/9;
-      }
-      .main-photo {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-      }
-      .side-photos {
-          display: grid;
-          grid-template-rows: 1fr 1fr;
-          gap: 0.5rem;
-      }
-      .side-photo {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-      }
-      .property-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 2rem;
-      }
-      .price-tag {
-          font-size: 2.5rem;
-          font-weight: 900;
-          letter-spacing: -0.05em;
-      }
-      .details-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 4rem;
-          margin-top: 3rem;
-      }
-      .amenities-list {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-          gap: 1rem;
-          margin-top: 1rem;
-      }
-      .amenity-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.9375rem;
-          color: #3f3f46;
-      }
-      .sidebar-card {
-           border: 1px solid #e4e4e7;
-           padding: 2rem;
-           border-radius: 16px;
-           position: sticky;
-           top: 6rem;
-           background: #fafafa;
-      }
-      .contact-btn {
-          display: block;
-          width: 100%;
-          padding: 1rem;
-          background: #000;
-          color: #fff;
-          text-align: center;
-          border-radius: 12px;
-          font-weight: 700;
-          text-decoration: none;
-          margin-top: 1.5rem;
-          transition: transform 0.2s;
-      }
-      .contact-btn:hover {
-          transform: translateY(-2px);
-      }
-      @media (max-width: 768px) {
-          .gallery-grid { grid-template-columns: 1fr; aspect-ratio: auto; }
-          .side-photos { display: none; }
-          .details-grid { grid-template-columns: 1fr; }
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <a href={`/${lang}`} style="font-weight: 800; font-size: 1.5rem; text-decoration: none; color: #000;">Estate 2026</a>
-      <nav style="display: flex; gap: 1.5rem; align-items: center;">
-        <a href={`/${lang}`} style="text-decoration: none; color: #71717a; font-weight: 500;">{t('nav.home')}</a>
-        <a href={`/${lang}/properties`} style="text-decoration: none; color: #71717a; font-weight: 500;">{t('nav.properties')}</a>
-        {user && <a href="/admin" style="padding: 0.4rem 0.8rem; background: #000; color: #fff; border-radius: 8px; text-decoration: none; font-size: 0.875rem;">Admin</a>}
-      </nav>
-    </header>
+<PublicLayout 
+  title={property.meta_title || property.title} 
+  description={seoDescription}
+  image={ogImage}
+  canonicalUrl={canonicalUrl}
+  lang={lang} 
+  activePage="properties"
+>
+  <style>
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f4f4f5;
+      aspect-ratio: 21/9;
+    }
+    .main-photo { width: 100%; height: 100%; object-fit: cover; }
+    .side-photos { display: grid; grid-template-rows: 1fr 1fr; gap: 0.5rem; }
+    .side-photo { width: 100%; height: 100%; object-fit: cover; }
+    .property-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+    .price-tag {
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 4rem;
+      margin-top: 3rem;
+    }
+    .amenities-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .amenity-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9375rem;
+      color: #3f3f46;
+    }
+    .sidebar-card {
+      border: 1px solid #e4e4e7;
+      padding: 2rem;
+      border-radius: 16px;
+      position: sticky;
+      top: 6rem;
+      background: #fafafa;
+    }
+    .contact-btn {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      background: #000;
+      color: #fff;
+      text-align: center;
+      border-radius: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      margin-top: 1.5rem;
+      transition: transform 0.2s;
+    }
+    .contact-btn:hover { transform: translateY(-2px); color: #fff; }
+    @media (max-width: 768px) {
+      .gallery-grid { grid-template-columns: 1fr; aspect-ratio: auto; }
+      .side-photos { display: none; }
+      .details-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 
-    <main class="container">
-        <div class="gallery-grid">
-            <img src={property.main_image ? `/api/media/${property.main_image}?w=1400` : '/placeholder.jpg'} class="main-photo" alt={property.title} fetchpriority="high" decoding="async" />
-            <div class="side-photos">
-                {gallery.slice(1, 3).map(img => (
-                    <img src={`/api/media/${img.r2_key}?w=600`} class="side-photo" alt="Gallery item" loading="lazy" decoding="async" />
-                ))}
-            </div>
+  <main class="container">
+    <div class="gallery-grid">
+      <img src={property.main_image ? `/api/media/${property.main_image}?w=1400` : '/placeholder.jpg'} class="main-photo" alt={property.title} fetchpriority="high" decoding="async" />
+      <div class="side-photos">
+        {gallery.slice(1, 3).map(img => (
+          <img src={`/api/media/${img.r2_key}?w=600`} class="side-photo" alt="Gallery item" loading="lazy" decoding="async" />
+        ))}
+      </div>
+    </div>
+
+    <div class="property-header">
+      <div>
+        <h1 style="font-size: 3rem; font-weight: 900; margin: 0; letter-spacing: -0.05em;">{property.title}</h1>
+        <p style="font-size: 1.25rem; color: #71717a; margin-top: 0.5rem;">📍 {property.area_name}</p>
+      </div>
+      <div class="price-tag">
+        {new Intl.NumberFormat(lang === 'bg' ? 'bg-BG' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(property.price)}
+      </div>
+    </div>
+
+    <div class="details-grid">
+      <div>
+        <h2 style="font-weight: 800; margin-bottom: 1.5rem;">{t('property.description') || 'Description'}</h2>
+        <div style="white-space: pre-wrap; font-size: 1.125rem; color: #3f3f46;">
+          {property.description}
         </div>
 
-        <div class="property-header">
-            <div>
-                <h1 style="font-size: 3rem; font-weight: 900; margin: 0; letter-spacing: -0.05em;">{property.title}</h1>
-                <p style="font-size: 1.25rem; color: #71717a; margin-top: 0.5rem;">📍 {property.area_name}</p>
+        <h2 style="font-weight: 800; margin-top: 4rem; margin-bottom: 1.5rem;">{t('property.amenities') || 'Amenities'}</h2>
+        <div class="amenities-list">
+          {extras.map(e => (
+            <div class="amenity-item">
+              <span>✅</span>
+              <span>{e.extra_key}</span>
             </div>
-            <div class="price-tag">
-                {new Intl.NumberFormat(lang === 'bg' ? 'bg-BG' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(property.price)}
-            </div>
+          ))}
         </div>
+      </div>
 
-        <div class="details-grid">
-            <div>
-                <h2 style="font-weight: 800; margin-bottom: 1.5rem;">{t('property.description') || 'Description'}</h2>
-                <div style="white-space: pre-wrap; font-size: 1.125rem; color: #3f3f46;">
-                    {property.description}
-                </div>
-
-                <h2 style="font-weight: 800; margin-top: 4rem; margin-bottom: 1.5rem;">{t('property.amenities') || 'Amenities'}</h2>
-                <div class="amenities-list">
-                    {extras.map(e => (
-                        <div class="amenity-item">
-                            <span>✅</span>
-                            <span>{e.extra_key}</span>
-                        </div>
-                    ))}
-                </div>
+      <aside>
+        <div class="sidebar-card">
+          <h3 style="margin-top: 0;">{t('property.quick_info') || 'Quick Info'}</h3>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #71717a;">{t('listing.bedrooms')}</span>
+              <span style="font-weight: 600;">{property.bedrooms}</span>
             </div>
-
-            <aside>
-                <div class="sidebar-card">
-                    <h3 style="margin-top: 0;">{t('property.quick_info') || 'Quick Info'}</h3>
-                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #71717a;">{t('listing.bedrooms')}</span>
-                            <span style="font-weight: 600;">{property.bedrooms}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #71717a;">Area</span>
-                            <span style="font-weight: 600;">{property.area_sqm} m²</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #71717a;">Type</span>
-                            <span style="font-weight: 600; text-transform: capitalize;">{property.property_type}</span>
-                        </div>
-                    </div>
-                    <a href={`/${lang}/contact?id=${property.id}`} class="contact-btn">{t('property.contact_agent') || 'Contact Agent'}</a>
-                </div>
-            </aside>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #71717a;">Area</span>
+              <span style="font-weight: 600;">{property.area_sqm} m²</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #71717a;">Type</span>
+              <span style="font-weight: 600; text-transform: capitalize;">{property.property_type}</span>
+            </div>
+          </div>
+          <a href={`/${lang}/contact?id=${property.id}`} class="contact-btn">{t('property.contact_agent') || 'Contact Agent'}</a>
         </div>
-    </main>
-  </body>
-</html>
+      </aside>
+    </div>
+  </main>
+</PublicLayout>
