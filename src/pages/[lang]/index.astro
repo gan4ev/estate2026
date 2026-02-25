@@ -21,16 +21,17 @@ const { results: latestProperties } = await db.prepare(`
         l.bedrooms, 
         l.area_sqm,
         l.created_at,
-        i.title, 
-        i.description,
-        i.slug as property_slug,
+        COALESCE(i_lang.title, i_en.title) as title, 
+        COALESCE(i_lang.description, i_en.description) as description,
+        COALESCE(i_lang.slug, i_en.slug) as property_slug,
         (SELECT r2_key FROM media WHERE listing_id = l.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as main_image,
         (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name,
         (SELECT slug FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_slug,
         (SELECT slug FROM location_i18n WHERE entity_id = (SELECT city_id FROM areas WHERE id = l.area_id) AND lang = ? AND entity_type = 'city') as city_slug,
         (SELECT slug FROM location_i18n WHERE entity_id = (SELECT country_id FROM cities WHERE id = (SELECT city_id FROM areas WHERE id = l.area_id)) AND lang = ? AND entity_type = 'country') as country_slug
     FROM listings l
-    LEFT JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
+    LEFT JOIN listing_i18n i_lang ON l.id = i_lang.listing_id AND i_lang.lang = ?
+    LEFT JOIN listing_i18n i_en ON l.id = i_en.listing_id AND i_en.lang = 'en'
     WHERE l.status = 'published'
     ORDER BY l.created_at DESC
     LIMIT 5

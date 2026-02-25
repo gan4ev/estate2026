@@ -18,27 +18,27 @@ const t = (key) => dict[key] || fallbackDict[key] || key;
 
 const user = Astro.locals.user;
 
-// Fetch property by slug
-// We join with location slugs to verify the path if needed, but primarily match by property slug
+// Fetch property by slug — try current lang first, fall back to English
 const query = `
     SELECT 
         l.*, 
-        i.title, 
-        i.description,
-        i.meta_title,
-        i.meta_description,
-        i.slug as property_slug,
+        COALESCE(i_lang.title, i_en.title) as title, 
+        COALESCE(i_lang.description, i_en.description) as description,
+        COALESCE(i_lang.meta_title, i_en.meta_title) as meta_title,
+        COALESCE(i_lang.meta_description, i_en.meta_description) as meta_description,
+        COALESCE(i_lang.slug, i_en.slug) as property_slug,
         (SELECT name FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_name,
         (SELECT slug FROM location_i18n WHERE entity_id = l.area_id AND lang = ? AND entity_type = 'area') as area_slug,
         (SELECT ci.id FROM areas a JOIN cities ci ON a.city_id = ci.id WHERE a.id = l.area_id) as city_id,
         (SELECT r2_key FROM media WHERE listing_id = l.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as main_image
     FROM listings l
-    JOIN listing_i18n i ON l.id = i.listing_id AND i.lang = ?
-    WHERE i.slug = ? AND l.status = 'published'
+    LEFT JOIN listing_i18n i_lang ON l.id = i_lang.listing_id AND i_lang.lang = ?
+    LEFT JOIN listing_i18n i_en ON l.id = i_en.listing_id AND i_en.lang = 'en'
+    WHERE (i_lang.slug = ? OR i_en.slug = ?) AND l.status = 'published'
     LIMIT 1
 `;
 
-const { results } = await db.prepare(query).bind(lang, lang, lang, propertySlug).all();
+const { results } = await db.prepare(query).bind(lang, lang, lang, propertySlug, propertySlug).all();
 const property = results?.[0];
 
 if (!property) {
