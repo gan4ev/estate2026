@@ -1,0 +1,76 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string | null;
+  lang?: string;
+  canonicalUrl?: string;
+}
+
+const { title, description, image, lang = 'en', canonicalUrl } = Astro.props;
+
+const R2_PUBLIC = 'https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev';
+---
+
+<!DOCTYPE html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Preconnect for R2 image domain -->
+    <link rel="preconnect" href={R2_PUBLIC} crossorigin />
+    <link rel="dns-prefetch" href={R2_PUBLIC} />
+
+    <!-- Self-hosted Inter font — no render-blocking external request -->
+    <style>
+      @font-face {
+        font-family: 'Inter';
+        src: url('/fonts/inter-400.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Inter';
+        src: url('/fonts/inter-700.woff2') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+      *, *::before, *::after { box-sizing: border-box; }
+      html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+      body { margin: 0; }
+      a { text-decoration: none; color: inherit; }
+    </style>
+
+    <!-- Preload critical font weights -->
+    <link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-700.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- SEO -->
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    {image && <meta property="og:image" content={image} />}
+    {image && <meta property="twitter:image" content={image} />}
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:type" content="website" />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+
+    <!-- Astro View Transitions — SPA-like navigation, no full reloads -->
+    <ViewTransitions />
+
+    <!-- Slot for page-specific head content -->
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

@@ -1,5 +1,6 @@
 ---
 export const prerender = false;
+import { ViewTransitions } from 'astro:transitions';
 import { getDictionary, getAvailableLanguages } from '../../../lib/i18n.js';
 import SeoTags from '../../../components/SeoTags.astro';
 
@@ -64,6 +65,10 @@ const ogImage = property.main_image ? new URL(`/api/media/${property.main_image}
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev" crossorigin />
+    <link rel="dns-prefetch" href="https://pub-4cba27b8006f4b939f87b7129149d1a4.r2.dev" />
+    <link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-700.woff2" as="font" type="font/woff2" crossorigin />
     <SeoTags 
         title={property.meta_title || property.title}
         description={description}
@@ -72,7 +77,10 @@ const ogImage = property.main_image ? new URL(`/api/media/${property.main_image}
         lang={lang}
         type="article"
     />
+    <ViewTransitions />
     <style>
+      @font-face { font-family: 'Inter'; src: url('/fonts/inter-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+      @font-face { font-family: 'Inter'; src: url('/fonts/inter-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
       body {
         margin: 0;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;

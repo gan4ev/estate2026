@@ -3,5 +3,10 @@ import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
     output: 'hybrid',
-    adapter: cloudflare()
+    adapter: cloudflare(),
+    prefetch: {
+        prefetchAll: true,
+        defaultStrategy: 'hover',
+    },
+    compressHTML: true,
 });
