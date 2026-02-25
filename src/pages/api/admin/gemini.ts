@@ -20,7 +20,7 @@ Source Interface JSON:
 ${JSON.stringify(sourceDictionary, null, 2)}`;
 
         // The user's provided Gemini API Key
-        const GEMINI_API_KEY = "AIzaSyCQY0we6DMO6tuCqtKjyF2iwdvEl3OOvEg";
+        const GEMINI_API_KEY = "AIzaSyADYJSKAfl6PyDeogHAoNE0g-3IKlKfpAM";
 
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',

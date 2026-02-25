@@ -56,11 +56,19 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
         if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), { status: 400 });
 
-        const title = formData.get('title')?.toString() || '';
+        // EN fields
+        const title = formData.get('title_en')?.toString() || '';
         const slug = formData.get('slug')?.toString() || slugify(title);
-        const description = formData.get('description')?.toString() || '';
+        const description = formData.get('description_en')?.toString() || '';
         const meta_title = formData.get('meta_title')?.toString() || title;
         const meta_description = formData.get('meta_description')?.toString() || description?.substring(0, 160);
+
+        // BG fields
+        const title_bg = formData.get('title_bg')?.toString() || '';
+        const description_bg = formData.get('description_bg')?.toString() || '';
+        const slug_bg = title_bg ? slugify(title_bg) : '';
+
+        // Common fields
         const main_category = formData.get('main_category')?.toString() || 'for_sale';
         const property_type = formData.get('property_type')?.toString();
         const stage = formData.get('stage')?.toString() || null;
@@ -95,6 +103,32 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
             // Clear and rebuild extras to simplify the logic
             db.prepare(`DELETE FROM listing_extras WHERE listing_id = ?`).bind(id)
         ];
+
+        // Upsert BG translation if provided
+        if (title_bg) {
+            // Check if BG row exists
+            const { results: bgCheck } = await db.prepare(
+                `SELECT id FROM listing_i18n WHERE listing_id = ? AND lang = 'bg'`
+            ).bind(id).all();
+
+            if (bgCheck && bgCheck.length > 0) {
+                statements.push(
+                    db.prepare(`
+                        UPDATE listing_i18n 
+                        SET title = ?, description = ?, slug = ?, meta_title = ?, meta_description = ?
+                        WHERE listing_id = ? AND lang = 'bg'
+                    `).bind(title_bg, description_bg, slug_bg, title_bg, description_bg?.substring(0, 160), id)
+                );
+            } else {
+                const bgId = crypto.randomUUID();
+                statements.push(
+                    db.prepare(`
+                        INSERT INTO listing_i18n (id, listing_id, lang, title, description, slug, meta_title, meta_description)
+                        VALUES (?, ?, 'bg', ?, ?, ?, ?, ?)
+                    `).bind(bgId, id, title_bg, description_bg, slug_bg, title_bg, description_bg?.substring(0, 160))
+                );
+            }
+        }
 
         if (extras && extras.length > 0) {
             for (const extra of extras) {

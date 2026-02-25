@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getDictionary } from '../../../lib/i18n.js';
+import { getDictionary, getAvailableLanguages } from '../../../lib/i18n.js';
 
 const { id } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
@@ -30,6 +30,12 @@ if (!results || results.length === 0) {
 }
 
 const listing = results[0];
+
+// Fetch BG translation if exists
+const { results: bgResults } = await db.prepare(`
+    SELECT title, description FROM listing_i18n WHERE listing_id = ? AND lang = 'bg'
+`).bind(id).all();
+const bgData = bgResults?.[0] || { title: '', description: '' };
 
 // Fetch hierarchical location data for dropdowns
 const { results: countries } = await db.prepare(`SELECT c.id, (SELECT name FROM location_i18n WHERE entity_id = c.id AND lang = ? AND entity_type = 'country') as name FROM countries c`).bind(adminLang).all();
@@ -63,14 +69,41 @@ const media = mediaResults || [];
 
     <form id="editListingForm" data-listing-id={id} data-cities={JSON.stringify(cities)} data-areas={JSON.stringify(areas)}>
       
-      <div class="form-group">
-        <label for="title">{t('admin.title')} ({t('en')}) *</label>
-        <input type="text" id="title" name="title" required value={listing.title} />
-      </div>
+      <!-- Language Tabs for Title & Description -->
+      <div style="margin-bottom: 1.5rem;">
+        <div class="lang-tabs" style="display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #e4e4e7;">
+          <button type="button" class="lang-tab active" data-lang="en" style="padding: 0.6rem 1.5rem; border: none; background: none; cursor: pointer; font-weight: 700; font-size: 0.9rem; color: #18181b; border-bottom: 2px solid #18181b; margin-bottom: -2px; transition: all 0.2s;">🇬🇧 EN</button>
+          <button type="button" class="lang-tab" data-lang="bg" style="padding: 0.6rem 1.5rem; border: none; background: none; cursor: pointer; font-weight: 500; font-size: 0.9rem; color: #a1a1aa; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;">🇧🇬 BG</button>
+        </div>
 
-      <div class="form-group">
-        <label for="description">{t('admin.description')} *</label>
-        <textarea id="description" name="description" required>{listing.description}</textarea>
+        <!-- EN Panel -->
+        <div class="lang-panel" data-lang="en" style="padding-top: 1rem;">
+          <div class="form-group">
+            <label for="title_en">Title (EN) *</label>
+            <input type="text" id="title_en" name="title_en" required value={listing.title} />
+          </div>
+          <div class="form-group">
+            <label for="description_en">Description (EN) *</label>
+            <textarea id="description_en" name="description_en" required>{listing.description}</textarea>
+          </div>
+        </div>
+
+        <!-- BG Panel -->
+        <div class="lang-panel" data-lang="bg" style="padding-top: 1rem; display: none;">
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+            <button type="button" id="translateBtn" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(99,102,241,0.3);">
+              ✨ Translate from EN
+            </button>
+          </div>
+          <div class="form-group">
+            <label for="title_bg">Title (BG)</label>
+            <input type="text" id="title_bg" name="title_bg" value={bgData.title} />
+          </div>
+          <div class="form-group">
+            <label for="description_bg">Description (BG)</label>
+            <textarea id="description_bg" name="description_bg">{bgData.description}</textarea>
+          </div>
+        </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
@@ -196,6 +229,18 @@ const media = mediaResults || [];
             opacity: 0.5;
             transform: scale(0.95);
           }
+          .lang-tab:hover {
+            color: #18181b !important;
+          }
+          #translateBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+          }
+          #translateBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+          }
         </style>
 
         <div style="margin-top: 1.5rem; border: 2px dashed #e4e4e7; padding: 2rem; text-align: center; border-radius: 8px;">
@@ -215,6 +260,72 @@ const media = mediaResults || [];
   </div>
 
   <script>
+    // Language Tab Switching
+    const tabs = document.querySelectorAll('.lang-tab');
+    const panels = document.querySelectorAll('.lang-panel');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const lang = tab.dataset.lang;
+        tabs.forEach(t => {
+          t.classList.remove('active');
+          t.style.fontWeight = '500';
+          t.style.color = '#a1a1aa';
+          t.style.borderBottomColor = 'transparent';
+        });
+        tab.classList.add('active');
+        tab.style.fontWeight = '700';
+        tab.style.color = '#18181b';
+        tab.style.borderBottomColor = '#18181b';
+
+        panels.forEach(p => {
+          p.style.display = p.dataset.lang === lang ? 'block' : 'none';
+        });
+      });
+    });
+
+    // Gemini Translation
+    const translateBtn = document.getElementById('translateBtn');
+    translateBtn?.addEventListener('click', async () => {
+      const titleEn = document.getElementById('title_en')?.value;
+      const descEn = document.getElementById('description_en')?.value;
+
+      if (!titleEn && !descEn) {
+        alert('Please fill in the English title and description first.');
+        return;
+      }
+
+      translateBtn.disabled = true;
+      translateBtn.textContent = '⏳ Translating...';
+
+      try {
+        const resp = await fetch('/api/admin/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceDictionary: { title: titleEn, description: descEn },
+            targetLangName: 'Bulgarian'
+          })
+        });
+
+        const result = await resp.json();
+
+        if (result.success && result.dictionary) {
+          document.getElementById('title_bg').value = result.dictionary.title || '';
+          document.getElementById('description_bg').value = result.dictionary.description || '';
+          translateBtn.textContent = '✅ Translated!';
+          setTimeout(() => { translateBtn.textContent = '✨ Translate from EN'; translateBtn.disabled = false; }, 2000);
+        } else {
+          throw new Error(result.error || 'Translation failed');
+        }
+      } catch (err) {
+        alert('Translation failed: ' + err.message);
+        translateBtn.textContent = '✨ Translate from EN';
+        translateBtn.disabled = false;
+      }
+    });
+
+    // Form & Location Logic
     const form = document.getElementById('editListingForm');
     const listingId = form?.dataset.listingId;
     const cities = JSON.parse(form?.dataset.cities || '[]');

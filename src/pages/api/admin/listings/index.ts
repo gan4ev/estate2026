@@ -7,11 +7,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const db = locals.runtime.env.DB;
         const formData = await request.formData();
 
-        const title = formData.get('title')?.toString() || '';
+        // EN fields
+        const title = formData.get('title_en')?.toString() || '';
         const slug = formData.get('slug')?.toString() || slugify(title);
-        const description = formData.get('description')?.toString() || '';
+        const description = formData.get('description_en')?.toString() || '';
         const meta_title = formData.get('meta_title')?.toString() || title;
         const meta_description = formData.get('meta_description')?.toString() || description?.substring(0, 160);
+
+        // BG fields
+        const title_bg = formData.get('title_bg')?.toString() || '';
+        const description_bg = formData.get('description_bg')?.toString() || '';
+        const slug_bg = title_bg ? slugify(title_bg) : '';
+
+        // Common fields
         const main_category = formData.get('main_category')?.toString() || 'for_sale';
         const property_type = formData.get('property_type')?.toString();
         const stage = formData.get('stage')?.toString() || null;
@@ -27,7 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         const listingId = crypto.randomUUID();
-        const i18nId = crypto.randomUUID();
+        const i18nIdEn = crypto.randomUUID();
 
         // 1. Build the core structural transactions
         const statements = [
@@ -39,10 +47,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
             db.prepare(`
                 INSERT INTO listing_i18n (id, listing_id, lang, title, description, slug, meta_title, meta_description)
                 VALUES (?, ?, 'en', ?, ?, ?, ?, ?)
-            `).bind(i18nId, listingId, title, description, slug, meta_title, meta_description)
+            `).bind(i18nIdEn, listingId, title, description, slug, meta_title, meta_description)
         ];
 
-        // 2. Append all the M2M Amenity linkages gracefully
+        // 2. Add BG translation if provided
+        if (title_bg) {
+            const i18nIdBg = crypto.randomUUID();
+            statements.push(
+                db.prepare(`
+                    INSERT INTO listing_i18n (id, listing_id, lang, title, description, slug, meta_title, meta_description)
+                    VALUES (?, ?, 'bg', ?, ?, ?, ?, ?)
+                `).bind(i18nIdBg, listingId, title_bg, description_bg, slug_bg, title_bg, description_bg?.substring(0, 160))
+            );
+        }
+
+        // 3. Append all the M2M Amenity linkages gracefully
         if (extras && extras.length > 0) {
             for (const extra of extras) {
                 statements.push(
@@ -51,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
         }
 
-        // 3. Batch execute to ensure referential integrity on the Edge
+        // 4. Batch execute to ensure referential integrity on the Edge
         await db.batch(statements);
 
         return new Response(JSON.stringify({
