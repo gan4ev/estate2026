@@ -9,9 +9,10 @@ interface Props {
   lang?: string;
   canonicalUrl?: string;
   activePage?: string;
+  langPaths?: Record<string, string>;
 }
 
-const { title, description, image, lang = 'en', canonicalUrl, activePage = '' } = Astro.props;
+const { title, description, image, lang = 'en', canonicalUrl, activePage = '', langPaths } = Astro.props;
 
 const db = Astro.locals.runtime?.env?.DB;
 const langs = await getAvailableLanguages(db);
@@ -162,11 +163,14 @@ const pathWithoutLang = currentPath.replace(/^\/(en|bg)/, '') || '/';
         <a href={`/${lang}/contact`} class={activePage === 'contact' ? 'active' : ''}>{t('nav.contact')}</a>
 
         <span class="nav-lang-switcher">
-          {langs.map(l => (
-            <a href={`/${l}${pathWithoutLang}`} data-active={l === lang ? 'true' : 'false'}>
-              {l.toUpperCase()}
-            </a>
-          ))}
+          {langs.map(l => {
+            const path = langPaths && langPaths[l] ? `/${l}${langPaths[l]}` : `/${l}${pathWithoutLang}`;
+            return (
+              <a href={path} data-active={l === lang ? 'true' : 'false'}>
+                {l.toUpperCase()}
+              </a>
+            );
+          })}
         </span>
 
         {user ? (
